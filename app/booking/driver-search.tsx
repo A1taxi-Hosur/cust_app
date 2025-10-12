@@ -585,7 +585,7 @@ export default function DriverSearchScreen() {
     console.log('🚨 [DEBUG] fetchAcceptedDriverDetails called with:', { driverId, hasRideData: !!rideData });
     try {
       console.log('🔄 [DRIVER_SEARCH] Fetching accepted driver details for driver ID:', driverId);
-      
+
       // Use the driver data from the ride query if available
       if (rideData && rideData.drivers) {
         console.log('🚨 [DEBUG] Using driver data from ride query');
@@ -609,10 +609,17 @@ export default function DriverSearchScreen() {
         setSearchStatus('celebrating');
         setInitialCheckComplete(true);
         console.log('🚨 [DEBUG] Driver data set, showing celebration animation');
-        
+
         if (rideData.drivers.user_id) {
           startDriverLocationPolling(rideData.drivers.user_id);
         }
+
+        // Auto-navigate to My Rides page after celebration animation
+        setTimeout(() => {
+          console.log('🚗 [DRIVER_SEARCH] Auto-navigating to My Rides page for live tracking');
+          router.replace('/(tabs)/rides');
+        }, 3000); // Wait 3 seconds for celebration animation
+
         return;
       }
       
@@ -667,10 +674,16 @@ export default function DriverSearchScreen() {
       setSearchStatus('celebrating');
       setInitialCheckComplete(true);
       console.log('🚨 [DEBUG] Driver data set from edge function, showing celebration animation');
-      
+
       if (driverDetails.user_id) {
         startDriverLocationPolling(driverDetails.user_id);
       }
+
+      // Auto-navigate to My Rides page after celebration animation
+      setTimeout(() => {
+        console.log('🚗 [DRIVER_SEARCH] Auto-navigating to My Rides page for live tracking');
+        router.replace('/(tabs)/rides');
+      }, 3000); // Wait 3 seconds for celebration animation
     } catch (error) {
       console.error('🚨 [DEBUG] Exception in fetchAcceptedDriverDetails:', error);
       console.error('❌ [DRIVER_SEARCH] Exception in fetchAcceptedDriverDetails:', error);
@@ -709,6 +722,13 @@ export default function DriverSearchScreen() {
         if (driverDetails.user_id) {
           startDriverLocationPolling(driverDetails.user_id);
         }
+
+        // Auto-navigate to My Rides page after celebration animation
+        setTimeout(() => {
+          console.log('🚗 [DRIVER_SEARCH] Auto-navigating to My Rides page for live tracking');
+          router.replace('/(tabs)/rides');
+        }, 3000); // Wait 3 seconds for celebration animation
+
         return;
       }
 
@@ -775,6 +795,12 @@ export default function DriverSearchScreen() {
       if (driverDetails.user_id) {
         startDriverLocationPolling(driverDetails.user_id);
       }
+
+      // Auto-navigate to My Rides page after celebration animation
+      setTimeout(() => {
+        console.log('🚗 [DRIVER_SEARCH] Auto-navigating to My Rides page for live tracking');
+        router.replace('/(tabs)/rides');
+      }, 3000); // Wait 3 seconds for celebration animation
 
     } catch (error) {
       console.error('🚨 [DEBUG] Exception in fetchAssignedDriverDetails:', error);
@@ -1019,25 +1045,6 @@ export default function DriverSearchScreen() {
               <Text style={styles.cancelButtonText}>Cancel Search</Text>
             </TouchableOpacity>
           )}
-
-          {/* Track Your Ride Button */}
-          <TouchableOpacity
-            style={styles.trackRideButton}
-            onPress={() => {
-              console.log('🚨 [DEBUG] Track Your Ride button pressed');
-              // Pass driver data to My Rides tab via navigation state
-              router.push({
-                pathname: '/(tabs)/rides',
-                params: {
-                  driverData: driverData ? JSON.stringify(driverData) : undefined,
-                  rideId: rideDetails.rideId || rideDetails.bookingId,
-                }
-              });
-            }}
-            activeOpacity={0.8}
-          >
-            <Text style={styles.trackRideButtonText}>Track Your Ride</Text>
-          </TouchableOpacity>
         </ScrollView>
 
         {/* Cancel Confirmation Modal */}
@@ -1408,18 +1415,6 @@ const styles = StyleSheet.create({
     fontSize: 16,
     fontWeight: '600',
     color: '#DC2626',
-  },
-  trackRideButton: {
-    backgroundColor: '#2563EB',
-    borderRadius: 12,
-    padding: 16,
-    alignItems: 'center',
-    marginBottom: 20,
-  },
-  trackRideButtonText: {
-    fontSize: 16,
-    fontWeight: '600',
-    color: '#FFFFFF',
   },
   errorContainer: {
     flex: 1,
