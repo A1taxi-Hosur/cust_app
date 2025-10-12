@@ -2,11 +2,12 @@ import React, { useState, useEffect, useRef, useImperativeHandle, forwardRef } f
 import { View, StyleSheet, Platform, Alert } from 'react-native';
 import MapView, { Marker, Polyline, PROVIDER_GOOGLE } from 'react-native-maps';
 import MapViewDirections from 'react-native-maps-directions';
-import { MapPin, Navigation, Car } from 'lucide-react-native';
+import { MapPin, Navigation } from 'lucide-react-native';
 import { GOOGLE_MAPS_API_KEY, HOSUR_COORDINATES } from '../config/maps';
 import { googleMapsService } from '../services/googleMapsService';
 import { enhancedLocationService } from '../services/enhancedLocationService';
 import { AvailableDriver } from '../services/driverLocationService';
+import AnimatedDriverMarker from './AnimatedDriverMarker';
 
 interface EnhancedGoogleMapViewProps {
   initialRegion?: {
@@ -288,18 +289,21 @@ const EnhancedGoogleMapView = forwardRef<MapRef, EnhancedGoogleMapViewProps>(({
           </Marker>
         )}
 
-        {/* Driver Marker */}
+        {/* Driver Marker - 3D Isometric Car */}
         {driverLocation && (
-          <Marker 
-            coordinate={driverLocation} 
-            identifier="driver" 
+          <Marker
+            coordinate={driverLocation}
+            identifier="driver"
             title="Driver Location"
             anchor={{ x: 0.5, y: 0.5 }}
-            rotation={driverLocation.heading || 0}
+            flat={true}
           >
-            <View style={styles.driverMarker}>
-              <Car size={20} color="#FFFFFF" />
-            </View>
+            <AnimatedDriverMarker
+              latitude={driverLocation.latitude}
+              longitude={driverLocation.longitude}
+              heading={driverLocation.heading || 0}
+              isMoving={true}
+            />
           </Marker>
         )}
 

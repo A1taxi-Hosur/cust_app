@@ -141,38 +141,34 @@ export default function LiveDriverTracking({
         },
       ]}
     >
-      <LinearGradient colors={['#FFFFFF', '#F9FAFB']} style={styles.card}>
-        {/* Compact ETA Display */}
-        <View style={styles.compactEtaSection}>
-          <View style={styles.etaCircle}>
-            <Text style={styles.etaNumber}>{eta}</Text>
-            <Text style={styles.etaLabel}>min</Text>
+      <LinearGradient
+        colors={['rgba(255,255,255,0.98)', 'rgba(249,250,251,0.98)']}
+        style={styles.card}
+        start={{ x: 0, y: 0 }}
+        end={{ x: 1, y: 0 }}
+      >
+        <View style={styles.horizontalRow}>
+          <View style={styles.etaBadge}>
+            <Text style={styles.etaText}>{eta}min</Text>
           </View>
-          <View style={styles.etaDetails}>
-            <Text style={styles.etaTitle}>
-              {eta <= 1 ? 'Almost there!' : 'Arriving soon'}
-            </Text>
-            <Text style={styles.etaSubtitle}>
-              {formatDistance(distance)} away
-            </Text>
-          </View>
-        </View>
 
-        {/* Driver Info Row */}
-        <View style={styles.driverRow}>
-          <View style={styles.driverIconSmall}>
-            <Car size={16} color="#2563EB" />
-          </View>
-          <View style={styles.driverInfoCompact}>
-            <Text style={styles.driverNameSmall}>{driverInfo.name}</Text>
-            <Text style={styles.vehicleInfoSmall}>
-              {driverInfo.vehicle} • {driverInfo.plateNumber}
+          <View style={styles.divider} />
+
+          <Text style={styles.distanceText}>{formatDistance(distance)}</Text>
+
+          <View style={styles.divider} />
+
+          <View style={styles.driverCompact}>
+            <Car size={12} color="#2563EB" />
+            <Text style={styles.driverText} numberOfLines={1}>
+              {driverInfo.name} • {driverInfo.plateNumber}
             </Text>
           </View>
+
           {driverLocation && (
-            <View style={styles.liveIndicatorCompact}>
-              <View style={styles.liveDotSmall} />
-              <Text style={styles.liveTextSmall}>LIVE</Text>
+            <View style={styles.liveBadge}>
+              <View style={styles.livePulse} />
+              <Text style={styles.liveText}>LIVE</Text>
             </View>
           )}
         </View>
@@ -183,105 +179,75 @@ export default function LiveDriverTracking({
 
 const styles = StyleSheet.create({
   container: {
-    marginHorizontal: 12,
-    marginVertical: 8,
+    marginHorizontal: 10,
+    marginVertical: 6,
   },
   card: {
-    borderRadius: 16,
-    padding: 16,
-    elevation: 6,
+    borderRadius: 24,
+    paddingHorizontal: 16,
+    paddingVertical: 10,
+    elevation: 8,
     shadowColor: '#000',
-    shadowOffset: { width: 0, height: 3 },
-    shadowOpacity: 0.15,
-    shadowRadius: 12,
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.2,
+    shadowRadius: 16,
   },
-  // Compact ETA Section
-  compactEtaSection: {
+  horizontalRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    marginBottom: 12,
-    paddingBottom: 12,
-    borderBottomWidth: 1,
-    borderBottomColor: '#E5E7EB',
+    justifyContent: 'space-between',
   },
-  etaCircle: {
-    width: 60,
-    height: 60,
-    borderRadius: 30,
+  etaBadge: {
     backgroundColor: '#10B981',
-    justifyContent: 'center',
-    alignItems: 'center',
-    marginRight: 12,
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderRadius: 16,
   },
-  etaNumber: {
-    fontSize: 24,
-    fontWeight: 'bold',
-    color: '#FFFFFF',
-    lineHeight: 28,
-  },
-  etaLabel: {
-    fontSize: 10,
-    fontWeight: '600',
-    color: '#FFFFFF',
-    opacity: 0.9,
-  },
-  etaDetails: {
-    flex: 1,
-  },
-  etaTitle: {
-    fontSize: 16,
-    fontWeight: 'bold',
-    color: '#1F2937',
-    marginBottom: 2,
-  },
-  etaSubtitle: {
+  etaText: {
     fontSize: 13,
-    color: '#6B7280',
+    fontWeight: 'bold',
+    color: '#FFFFFF',
   },
-  // Driver Info Row
-  driverRow: {
+  divider: {
+    width: 1,
+    height: 20,
+    backgroundColor: '#E5E7EB',
+    marginHorizontal: 8,
+  },
+  distanceText: {
+    fontSize: 13,
+    fontWeight: '600',
+    color: '#1F2937',
+  },
+  driverCompact: {
     flexDirection: 'row',
     alignItems: 'center',
-  },
-  driverIconSmall: {
-    width: 32,
-    height: 32,
-    borderRadius: 16,
-    backgroundColor: '#EFF6FF',
-    justifyContent: 'center',
-    alignItems: 'center',
-    marginRight: 10,
-  },
-  driverInfoCompact: {
+    gap: 6,
     flex: 1,
+    marginHorizontal: 8,
   },
-  driverNameSmall: {
-    fontSize: 14,
-    fontWeight: '600',
-    color: '#1F2937',
-    marginBottom: 2,
-  },
-  vehicleInfoSmall: {
+  driverText: {
     fontSize: 12,
-    color: '#6B7280',
+    fontWeight: '500',
+    color: '#4B5563',
   },
-  liveIndicatorCompact: {
+  liveBadge: {
     flexDirection: 'row',
     alignItems: 'center',
     backgroundColor: '#FEE2E2',
     paddingHorizontal: 8,
     paddingVertical: 4,
     borderRadius: 12,
+    gap: 4,
   },
-  liveDotSmall: {
+  livePulse: {
     width: 6,
     height: 6,
     borderRadius: 3,
     backgroundColor: '#EF4444',
-    marginRight: 4,
   },
-  liveTextSmall: {
-    fontSize: 10,
+  liveText: {
+    fontSize: 9,
     fontWeight: '700',
     color: '#EF4444',
     letterSpacing: 0.5,

@@ -242,58 +242,55 @@ const EnhancedGoogleMapView = forwardRef<MapRef, EnhancedGoogleMapViewProps>(({
   const createCarIcon = (heading: number = 0) => {
     const rotation = heading;
     const svg = `
-      <svg width="60" height="60" viewBox="0 0 60 60" xmlns="http://www.w3.org/2000/svg">
-        <g transform="rotate(${rotation} 30 30)">
+      <svg width="70" height="70" viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg">
+        <defs>
+          <linearGradient id="carBody" x1="0%" y1="0%" x2="0%" y2="100%">
+            <stop offset="0%" stop-color="#3B82F6" stop-opacity="1" />
+            <stop offset="100%" stop-color="#1E40AF" stop-opacity="1" />
+          </linearGradient>
+          <linearGradient id="carTop" x1="0%" y1="0%" x2="0%" y2="100%">
+            <stop offset="0%" stop-color="#60A5FA" stop-opacity="1" />
+            <stop offset="100%" stop-color="#3B82F6" stop-opacity="1" />
+          </linearGradient>
+          <linearGradient id="carWindow" x1="0%" y1="0%" x2="0%" y2="100%">
+            <stop offset="0%" stop-color="#93C5FD" stop-opacity="0.8" />
+            <stop offset="100%" stop-color="#60A5FA" stop-opacity="0.6" />
+          </linearGradient>
+        </defs>
+        <g transform="rotate(${rotation} 50 50)">
           <!-- Shadow -->
-          <ellipse cx="30" cy="52" rx="20" ry="5" fill="rgba(0,0,0,0.3)"/>
+          <ellipse cx="50" cy="70" rx="18" ry="4" fill="rgba(0,0,0,0.3)"/>
 
-          <!-- Yellow Taxi Car Body -->
-          <g transform="translate(12, 8)">
-            <!-- Main body - Orange/Yellow -->
-            <rect x="6" y="12" width="24" height="32" rx="2" fill="#FFA500"/>
-            <rect x="7" y="13" width="22" height="30" rx="1.5" fill="#FFB833"/>
+          <!-- Isometric 3D Car -->
+          <g transform="translate(0, 0)">
+            <!-- Car body - bottom -->
+            <path d="M 30 55 L 45 45 L 70 45 L 70 60 L 30 60 Z" fill="url(#carBody)" stroke="#1E3A8A" stroke-width="1.5"/>
 
-            <!-- Roof - Darker Orange -->
-            <rect x="8" y="12" width="20" height="10" rx="2" fill="#FF8C00"/>
+            <!-- Car body - top cabin -->
+            <path d="M 35 45 L 45 35 L 60 35 L 65 45 Z" fill="url(#carTop)" stroke="#1E3A8A" stroke-width="1.5"/>
 
-            <!-- Windshield - Dark Gray -->
-            <rect x="10" y="14" width="16" height="6" rx="1" fill="#3D3D3D"/>
+            <!-- Front windshield -->
+            <path d="M 45 35 L 50 40 L 60 40 L 60 35 Z" fill="url(#carWindow)" stroke="#1E40AF" stroke-width="1"/>
 
-            <!-- Rear Window - Dark Gray -->
-            <rect x="10" y="36" width="16" height="5" rx="1" fill="#3D3D3D"/>
+            <!-- Side window -->
+            <path d="M 35 45 L 40 40 L 45 40 L 45 45 Z" fill="url(#carWindow)" stroke="#1E40AF" stroke-width="1"/>
 
-            <!-- Side Windows - Dark Gray -->
-            <rect x="8" y="24" width="3" height="8" rx="0.5" fill="#3D3D3D"/>
-            <rect x="25" y="24" width="3" height="8" rx="0.5" fill="#3D3D3D"/>
+            <!-- Front wheel -->
+            <circle cx="60" cy="60" r="5" fill="#1F2937" stroke="#374151" stroke-width="1.5"/>
+            <circle cx="60" cy="60" r="3" fill="#4B5563"/>
 
-            <!-- Wheels - Black with Gray Rim -->
-            <g>
-              <circle cx="10" cy="16" r="3.5" fill="#000000"/>
-              <circle cx="10" cy="16" r="1.8" fill="#4B5563"/>
+            <!-- Rear wheel -->
+            <circle cx="38" cy="60" r="5" fill="#1F2937" stroke="#374151" stroke-width="1.5"/>
+            <circle cx="38" cy="60" r="3" fill="#4B5563"/>
 
-              <circle cx="26" cy="16" r="3.5" fill="#000000"/>
-              <circle cx="26" cy="16" r="1.8" fill="#4B5563"/>
+            <!-- Headlights -->
+            <circle cx="68" cy="52" r="2" fill="#FCD34D" opacity="0.9"/>
 
-              <circle cx="10" cy="40" r="3.5" fill="#000000"/>
-              <circle cx="10" cy="40" r="1.8" fill="#4B5563"/>
+            <!-- Side mirror -->
+            <path d="M 70 48 L 73 47 L 73 49 Z" fill="#2563EB" stroke="#1E40AF" stroke-width="1"/>
 
-              <circle cx="26" cy="40" r="3.5" fill="#000000"/>
-              <circle cx="26" cy="40" r="1.8" fill="#4B5563"/>
-            </g>
-
-            <!-- Headlights - Yellow -->
-            <circle cx="14" cy="10" r="1.5" fill="#FFEB3B"/>
-            <circle cx="22" cy="10" r="1.5" fill="#FFEB3B"/>
-
-            <!-- Taillights - Red -->
-            <rect x="12" y="43" width="3" height="1.5" rx="0.5" fill="#FF4444"/>
-            <rect x="21" y="43" width="3" height="1.5" rx="0.5" fill="#FF4444"/>
-
-            <!-- Door Lines -->
-            <line x1="18" y1="24" x2="18" y2="36" stroke="#FF8C00" stroke-width="1"/>
-
-            <!-- Black Outline for contrast -->
-            <rect x="6" y="12" width="24" height="32" rx="2" fill="none" stroke="#000000" stroke-width="1.5" opacity="0.3"/>
+            <!-- Hood details -->
+            <path d="M 50 45 L 53 45" stroke="#1E40AF" stroke-width="1" opacity="0.6"/>
           </g>
         </g>
       </svg>
