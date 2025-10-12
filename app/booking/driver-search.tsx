@@ -41,7 +41,7 @@ export default function DriverSearchScreen() {
     paramsValues: params
   });
   
-  const [searchStatus, setSearchStatus] = useState<'searching' | 'found' | 'celebrating' | 'cancelled'>('searching');
+  const [searchStatus, setSearchStatus] = useState<'searching' | 'found' | 'celebrating' | 'cancelled' | 'timeout'>('searching');
   const [estimatedTime, setEstimatedTime] = useState('2-5 min');
   const [cancelling, setCancelling] = useState(false);
   const [showCancelModal, setShowCancelModal] = useState(false);
@@ -53,6 +53,7 @@ export default function DriverSearchScreen() {
   const [pollingIntervalId, setPollingIntervalId] = useState<NodeJS.Timeout | null>(null);
   const [showCelebration, setShowCelebration] = useState(false);
   const [prevDriverLocation, setPrevDriverLocation] = useState<any>(null);
+  const [searchTimeoutId, setSearchTimeoutId] = useState<NodeJS.Timeout | null>(null);
 
   const performCancellation = async () => {
     if (!rideDetails.rideId && !rideDetails.bookingId) {
@@ -141,6 +142,12 @@ export default function DriverSearchScreen() {
       if (pollingIntervalId) {
         clearInterval(pollingIntervalId);
         setPollingIntervalId(null);
+      }
+
+      // Clear search timeout
+      if (searchTimeoutId) {
+        clearTimeout(searchTimeoutId);
+        setSearchTimeoutId(null);
       }
 
       // Navigate back to home
@@ -269,33 +276,17 @@ export default function DriverSearchScreen() {
     // Set timeout for no drivers found
     const timeoutId = setTimeout(() => {
       if (searchStatus === 'searching') {
-        console.log('⏰ [DRIVER_SEARCH] Search timeout reached');
-        setSearchStatus('cancelled');
-        Alert.alert(
-          'No Drivers Available',
-          'Sorry, no drivers are available at the moment. Please try again later.',
-          [
-            {
-              text: 'Try Again',
-              onPress: () => {
-                setSearchStatus('searching');
-                // Restart polling
-                if (rideDetails.rideId && Platform.OS === 'web') {
-                  setupRidePolling(rideDetails.rideId);
-                } else if (rideDetails.bookingId && Platform.OS === 'web') {
-                  setupBookingPolling(rideDetails.bookingId);
-                }
-              }
-            },
-            {
-              text: 'Go Back',
-              onPress: () => router.back(),
-              style: 'cancel'
-            }
-          ]
-        );
+        console.log('⏰ [DRIVER_SEARCH] Search timeout reached (2 minutes)');
+        setSearchStatus('timeout');
+
+        // Clear polling intervals
+        if (pollingIntervalId) {
+          clearInterval(pollingIntervalId);
+        }
       }
     }, SEARCH_TIMEOUT);
+
+    setSearchTimeoutId(timeoutId);
 
     return () => {
       console.log('🚨 [DEBUG] useEffect cleanup triggered');
@@ -303,9 +294,40 @@ export default function DriverSearchScreen() {
       if (pollingIntervalId) {
         clearInterval(pollingIntervalId);
       }
-      clearTimeout(timeoutId);
+      if (timeoutId) {
+        clearTimeout(timeoutId);
+      }
     };
   }, []); // Empty dependency array to prevent re-runs
+
+  // Function to retry driver search
+  const retryDriverSearch = () => {
+    console.log('🔄 [DRIVER_SEARCH] Retrying driver search...');
+    setSearchStatus('searching');
+
+    // Clear any existing timeout
+    if (searchTimeoutId) {
+      clearTimeout(searchTimeoutId);
+      setSearchTimeoutId(null);
+    }
+
+    // Restart polling based on ride type and platform
+    if (rideDetails.rideId && Platform.OS === 'web') {
+      setupRidePolling(rideDetails.rideId);
+    } else if (rideDetails.bookingId && Platform.OS === 'web') {
+      setupBookingPolling(rideDetails.bookingId);
+    }
+
+    // Set new timeout
+    const newTimeoutId = setTimeout(() => {
+      if (searchStatus === 'searching') {
+        console.log('⏰ [DRIVER_SEARCH] Search timeout reached again (2 minutes)');
+        setSearchStatus('timeout');
+      }
+    }, SEARCH_TIMEOUT);
+
+    setSearchTimeoutId(newTimeoutId);
+  };
 
   // Setup polling for ride updates (web platform)
   const setupRidePolling = (rideId: string): NodeJS.Timeout => {
@@ -881,6 +903,23 @@ export default function DriverSearchScreen() {
               </View>
             )}
 
+            {searchStatus === 'timeout' && (
+              <View style={styles.timeoutContainer}>
+                <Clock size={48} color="#DC2626" />
+                <Text style={styles.timeoutTitle}>No Drivers Available</Text>
+                <Text style={styles.timeoutMessage}>
+                  Sorry, no drivers are available at the moment. This could be due to high demand or limited drivers in your area.
+                </Text>
+                <TouchableOpacity
+                  style={styles.tryAgainButton}
+                  onPress={retryDriverSearch}
+                  activeOpacity={0.8}
+                >
+                  <Text style={styles.tryAgainButtonText}>Try Again</Text>
+                </TouchableOpacity>
+              </View>
+            )}
+
             {(searchStatus === 'found' || searchStatus === 'celebrating') && driverData && !driverLocation && (
               <View style={styles.foundContainer}>
                 <View style={styles.foundHeader}>
@@ -968,7 +1007,7 @@ export default function DriverSearchScreen() {
           </View>
 
           {/* Cancel Button */}
-          {searchStatus === 'searching' && (
+          {(searchStatus === 'searching' || searchStatus === 'timeout') && (
             <TouchableOpacity
               style={styles.cancelButton}
               onPress={() => {
@@ -1151,6 +1190,45 @@ const styles = StyleSheet.create({
     fontSize: 14,
     color: '#2563EB',
     fontWeight: '600',
+  },
+  timeoutContainer: {
+    backgroundColor: '#FFFFFF',
+    borderRadius: 16,
+    padding: 24,
+    alignItems: 'center',
+    elevation: 2,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.05,
+    shadowRadius: 4,
+  },
+  timeoutTitle: {
+    fontSize: 20,
+    fontWeight: 'bold',
+    color: '#DC2626',
+    marginTop: 16,
+    marginBottom: 8,
+    textAlign: 'center',
+  },
+  timeoutMessage: {
+    fontSize: 16,
+    color: '#6B7280',
+    textAlign: 'center',
+    marginBottom: 20,
+    lineHeight: 24,
+  },
+  tryAgainButton: {
+    backgroundColor: '#2563EB',
+    borderRadius: 12,
+    paddingVertical: 14,
+    paddingHorizontal: 32,
+    alignItems: 'center',
+    minWidth: 160,
+  },
+  tryAgainButtonText: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: '#FFFFFF',
   },
   foundContainer: {
     backgroundColor: '#FFFFFF',
