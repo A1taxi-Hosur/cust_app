@@ -13,7 +13,7 @@ import {
   Platform,
 } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
-import { MapPin, Navigation, ArrowUpDown, Menu, Clock, Plane, TestTube2 } from 'lucide-react-native';
+import { MapPin, Navigation, ArrowUpDown, Menu, Clock, Plane } from 'lucide-react-native';
 import * as Location from 'expo-location';
 import { useAuth } from '../../src/contexts/AuthContext';
 import { useRouter } from 'expo-router';
@@ -1244,8 +1244,8 @@ export default function HomeScreen() {
   }
 
   return (
-    <SafeAreaView style={styles.container}>
-      {/* Map Container - Top Half */}
+    <View style={styles.container}>
+      {/* Map Container - Full Screen */}
       <View style={styles.mapContainer}>
         <EnhancedGoogleMapView
           initialRegion={mapRegion}
@@ -1265,12 +1265,13 @@ export default function HomeScreen() {
         />
       </View>
 
-      {/* Bottom Sheet - Bottom Half */}
+      {/* Bottom Sheet - Scrollable Over Map */}
       <View style={styles.bottomSheet}>
         <View style={styles.dragHandle} />
-        
-        <ScrollView 
+
+        <ScrollView
           style={styles.scrollView}
+          contentContainerStyle={styles.scrollViewContent}
           showsVerticalScrollIndicator={false}
           bounces={true}
         >
@@ -1306,21 +1307,6 @@ export default function HomeScreen() {
               <ArrowUpDown size={20} color="#6B7280" />
             </TouchableOpacity>
           </View>
-
-          {/* Test Animation Button */}
-          <TouchableOpacity
-            style={styles.testAnimationButton}
-            onPress={() => router.push('/test-animations')}
-            activeOpacity={0.8}
-          >
-            <LinearGradient
-              colors={['#8B5CF6', '#7C3AED']}
-              style={styles.testButtonGradient}
-            >
-              <TestTube2 size={20} color="#FFFFFF" />
-              <Text style={styles.testButtonText}>Test Animations</Text>
-            </LinearGradient>
-          </TouchableOpacity>
 
           {/* Service Options - Horizontal */}
           <View style={styles.servicesSection}>
@@ -1488,44 +1474,55 @@ export default function HomeScreen() {
         buttons={customAlert.buttons}
         onRequestClose={() => hideCustomAlert()}
       />
-    </SafeAreaView>
+    </View>
   );
 }
 
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#FFFFFF',
+    backgroundColor: '#F3F4F6',
   },
   mapContainer: {
-    height: height * 0.5, // Top half of screen
-    position: 'relative',
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
   },
   map: {
     flex: 1,
   },
   bottomSheet: {
-    flex: 1,
+    position: 'absolute',
+    bottom: 0,
+    left: 0,
+    right: 0,
+    maxHeight: height * 0.85,
     backgroundColor: '#FFFFFF',
     borderTopLeftRadius: 24,
     borderTopRightRadius: 24,
     paddingTop: 8,
-    elevation: 8,
+    elevation: 12,
     shadowColor: '#000',
     shadowOffset: { width: 0, height: -4 },
-    shadowOpacity: 0.1,
-    shadowRadius: 12,
+    shadowOpacity: 0.2,
+    shadowRadius: 16,
   },
   scrollView: {
     flex: 1,
   },
+  scrollViewContent: {
+    paddingBottom: 40,
+  },
   dragHandle: {
     width: 40,
-    height: 4,
+    height: 5,
     backgroundColor: '#D1D5DB',
-    borderRadius: 2,
+    borderRadius: 3,
     alignSelf: 'center',
-    marginBottom: 20,
+    marginBottom: 16,
+    marginTop: 8,
   },
   locationInputs: {
     flexDirection: 'row',
@@ -1583,30 +1580,6 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     alignItems: 'center',
     marginLeft: 12,
-  },
-  testAnimationButton: {
-    marginHorizontal: 20,
-    marginBottom: 20,
-    borderRadius: 16,
-    overflow: 'hidden',
-    elevation: 4,
-    shadowColor: '#8B5CF6',
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.3,
-    shadowRadius: 8,
-  },
-  testButtonGradient: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    paddingVertical: 16,
-    paddingHorizontal: 24,
-  },
-  testButtonText: {
-    fontSize: 16,
-    fontWeight: 'bold',
-    color: '#FFFFFF',
-    marginLeft: 8,
   },
   servicesSection: {
     paddingHorizontal: 20,
