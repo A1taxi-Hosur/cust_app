@@ -211,7 +211,7 @@ export default function DriverSearchScreen() {
       bookingId: rideDetails.bookingId
     });
 
-    let pollingIntervalId: NodeJS.Timeout | null = null;
+    let localPollingIntervalId: NodeJS.Timeout | null = null;
 
     // Perform initial check for already assigned driver
     const performInitialCheck = async () => {
@@ -257,7 +257,9 @@ export default function DriverSearchScreen() {
       if (rideDetails.rideId) {
         if (Platform.OS === 'web') {
           console.log('🌐 [DRIVER_SEARCH] Web platform - setting up polling for ride updates');
-          pollingIntervalId = setupRidePolling(rideDetails.rideId);
+          const intervalId = setupRidePolling(rideDetails.rideId);
+          localPollingIntervalId = intervalId;
+          setPollingIntervalId(intervalId);
         } else {
           console.log('📱 [DRIVER_SEARCH] Mobile platform - setting up real-time subscription');
           setupRideSubscription(rideDetails.rideId);
@@ -265,7 +267,9 @@ export default function DriverSearchScreen() {
       } else if (rideDetails.bookingId) {
         if (Platform.OS === 'web') {
           console.log('🌐 [DRIVER_SEARCH] Web platform - setting up polling for booking updates');
-          pollingIntervalId = setupBookingPolling(rideDetails.bookingId);
+          const intervalId = setupBookingPolling(rideDetails.bookingId);
+          localPollingIntervalId = intervalId;
+          setPollingIntervalId(intervalId);
         } else {
           console.log('📱 [DRIVER_SEARCH] Mobile platform - setting up booking subscription');
           setupBookingSubscription(rideDetails.bookingId);
@@ -280,8 +284,9 @@ export default function DriverSearchScreen() {
         setSearchStatus('timeout');
 
         // Clear polling intervals
-        if (pollingIntervalId) {
-          clearInterval(pollingIntervalId);
+        if (localPollingIntervalId) {
+          clearInterval(localPollingIntervalId);
+          setPollingIntervalId(null);
         }
       }
     }, SEARCH_TIMEOUT);
@@ -291,8 +296,8 @@ export default function DriverSearchScreen() {
     return () => {
       console.log('🚨 [DEBUG] useEffect cleanup triggered');
       console.log('🧹 [DRIVER_SEARCH] Cleaning up subscriptions and polling');
-      if (pollingIntervalId) {
-        clearInterval(pollingIntervalId);
+      if (localPollingIntervalId) {
+        clearInterval(localPollingIntervalId);
       }
       if (timeoutId) {
         clearTimeout(timeoutId);
@@ -311,11 +316,19 @@ export default function DriverSearchScreen() {
       setSearchTimeoutId(null);
     }
 
+    // Clear any existing polling
+    if (pollingIntervalId) {
+      clearInterval(pollingIntervalId);
+      setPollingIntervalId(null);
+    }
+
     // Restart polling based on ride type and platform
     if (rideDetails.rideId && Platform.OS === 'web') {
-      setupRidePolling(rideDetails.rideId);
+      const intervalId = setupRidePolling(rideDetails.rideId);
+      setPollingIntervalId(intervalId);
     } else if (rideDetails.bookingId && Platform.OS === 'web') {
-      setupBookingPolling(rideDetails.bookingId);
+      const intervalId = setupBookingPolling(rideDetails.bookingId);
+      setPollingIntervalId(intervalId);
     }
 
     // Set new timeout
@@ -323,6 +336,12 @@ export default function DriverSearchScreen() {
       if (searchStatus === 'searching') {
         console.log('⏰ [DRIVER_SEARCH] Search timeout reached again (2 minutes)');
         setSearchStatus('timeout');
+
+        // Clear polling on timeout
+        if (pollingIntervalId) {
+          clearInterval(pollingIntervalId);
+          setPollingIntervalId(null);
+        }
       }
     }, SEARCH_TIMEOUT);
 
@@ -333,16 +352,18 @@ export default function DriverSearchScreen() {
   const setupRidePolling = (rideId: string): NodeJS.Timeout => {
     console.log('🚨 [DEBUG] setupRidePolling function called with rideId:', rideId);
     console.log('🌐 [DRIVER_SEARCH] Setting up ride polling for:', rideId);
-    
-    const intervalId = setInterval(async () => {
-      console.log('🚨 [DEBUG] Ride polling interval triggered');
+
+    let intervalId: NodeJS.Timeout;
+
+    intervalId = setInterval(async () => {
+      console.log('🚨 [DEBUG] Ride polling interval triggered at:', new Date().toISOString());
       try {
         // Check if Supabase is properly configured before making requests
         const supabaseUrl = process.env.EXPO_PUBLIC_SUPABASE_URL;
         const supabaseKey = process.env.EXPO_PUBLIC_SUPABASE_ANON_KEY;
-        
-        if (!supabaseUrl || !supabaseKey || 
-            supabaseKey.includes('YourActualAnonKeyHere') || 
+
+        if (!supabaseUrl || !supabaseKey ||
+            supabaseKey.includes('YourActualAnonKeyHere') ||
             supabaseKey.includes('placeholder') ||
             supabaseUrl.includes('placeholder')) {
           console.warn('⚠️ [DRIVER_SEARCH] Supabase not properly configured, skipping ride polling');
@@ -376,7 +397,7 @@ export default function DriverSearchScreen() {
 
         if (error) {
           console.error('🚨 [DEBUG] Ride polling error:', error);
-          
+
           // If it's a network error, don't spam the console
           if (error.message?.includes('Failed to fetch') || error.message?.includes('fetch')) {
             console.warn('⚠️ [DRIVER_SEARCH] Network error during ride polling, will retry...');
@@ -386,18 +407,22 @@ export default function DriverSearchScreen() {
           return;
         }
 
+        console.log('🔍 [DRIVER_SEARCH] Polled ride status:', rideData?.status, 'driver_id:', rideData?.driver_id);
+
         if (rideData && rideData.status === 'accepted' && rideData.driver_id) {
           console.log('🚨 [DEBUG] Driver accepted detected in polling');
           console.log('✅ [DRIVER_SEARCH] Driver accepted via polling!');
+
+          // Clear this interval immediately
+          clearInterval(intervalId);
+          setPollingIntervalId(null);
+
+          // Fetch driver details and trigger navigation
           await fetchAcceptedDriverDetails(rideData.driver_id, rideData);
-          if (pollingIntervalId) {
-            clearInterval(pollingIntervalId);
-            setPollingIntervalId(null);
-          }
         }
       } catch (error) {
         console.error('🚨 [DEBUG] Ride polling exception:', error);
-        
+
         // Handle network errors gracefully
         if (error instanceof TypeError && error.message.includes('Failed to fetch')) {
           console.warn('⚠️ [DRIVER_SEARCH] Network connectivity issue during ride polling, will retry...');
@@ -407,7 +432,6 @@ export default function DriverSearchScreen() {
       }
     }, POLL_INTERVAL);
 
-    setPollingIntervalId(intervalId);
     console.log('🚨 [DEBUG] Ride polling setup complete, intervalId:', intervalId);
     return intervalId;
   };
@@ -416,9 +440,11 @@ export default function DriverSearchScreen() {
   const setupBookingPolling = (bookingId: string): NodeJS.Timeout => {
     console.log('🚨 [DEBUG] setupBookingPolling function called with bookingId:', bookingId);
     console.log('🌐 [DRIVER_SEARCH] Setting up booking polling for:', bookingId);
-    
-    const intervalId = setInterval(async () => {
-      console.log('🚨 [DEBUG] Booking polling interval triggered');
+
+    let intervalId: NodeJS.Timeout;
+
+    intervalId = setInterval(async () => {
+      console.log('🚨 [DEBUG] Booking polling interval triggered at:', new Date().toISOString());
       try {
         // Check if Supabase is properly configured before making requests
         const supabaseUrl = process.env.EXPO_PUBLIC_SUPABASE_URL;
@@ -460,18 +486,22 @@ export default function DriverSearchScreen() {
           return;
         }
 
+        console.log('🔍 [DRIVER_SEARCH] Polled booking status:', bookingData?.status, 'assigned_driver_id:', bookingData?.assigned_driver_id);
+
         if (bookingData && bookingData.status === 'assigned' && bookingData.assigned_driver_id) {
           console.log('🚨 [DEBUG] Driver assigned detected in booking polling');
           console.log('✅ [DRIVER_SEARCH] Driver assigned via polling!');
+
+          // Clear this interval immediately
+          clearInterval(intervalId);
+          setPollingIntervalId(null);
+
+          // Fetch driver details and trigger navigation
           await fetchAssignedDriverDetails(bookingData.assigned_driver_id, bookingData);
-          if (pollingIntervalId) {
-            clearInterval(pollingIntervalId);
-            setPollingIntervalId(null);
-          }
         }
       } catch (error) {
         console.error('🚨 [DEBUG] Booking polling exception:', error);
-        
+
         // Handle network errors gracefully
         if (error instanceof TypeError && error.message.includes('Failed to fetch')) {
           console.warn('⚠️ [DRIVER_SEARCH] Network connectivity issue during polling, will retry...');
@@ -481,7 +511,6 @@ export default function DriverSearchScreen() {
       }
     }, POLL_INTERVAL);
 
-    setPollingIntervalId(intervalId);
     console.log('🚨 [DEBUG] Booking polling setup complete, intervalId:', intervalId);
     return intervalId;
   };
