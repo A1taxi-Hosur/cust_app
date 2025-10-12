@@ -29,21 +29,37 @@ class RealtimeService {
   }
 
   // Subscribe to driver location updates
+  // Note: driverId parameter can be either driver.id or driver.user_id depending on context
+  // For driver_locations table, we need driver_id (driver.id)
+  // For live_locations table (legacy), we use user_id
   subscribeToDriverLocation(driverId: string, callback: (location: any) => void) {
     const channelName = `driver_location_${driverId}`;
-    
+
     if (this.channels.has(channelName)) {
       this.channels.get(channelName)?.unsubscribe();
     }
 
+    // Try both tables for backwards compatibility
     const channel = supabase
       .channel(channelName)
+      // Primary: driver_locations table (uses driver_id)
+      .on('postgres_changes', {
+        event: '*',
+        schema: 'public',
+        table: 'driver_locations',
+        filter: `driver_id=eq.${driverId}`,
+      }, (payload) => {
+        console.log('📍 [REALTIME] Driver location from driver_locations:', payload.new);
+        callback(payload.new);
+      })
+      // Fallback: live_locations table (uses user_id)
       .on('postgres_changes', {
         event: '*',
         schema: 'public',
         table: 'live_locations',
         filter: `user_id=eq.${driverId}`,
       }, (payload) => {
+        console.log('📍 [REALTIME] Driver location from live_locations:', payload.new);
         callback(payload.new);
       })
       .subscribe();

@@ -253,17 +253,42 @@ export default function RidesScreen() {
       }
 
       // Subscribe to driver location updates if driver assigned
-      if (ride.driver_id && (ride.drivers?.user_id || ride.assigned_driver?.user_id)) {
-        const driverUserId = ride.drivers?.user_id || ride.assigned_driver?.user_id;
-        console.log('📍 [RIDES] Subscribing to driver location:', driverUserId);
+      if (ride.driver_id) {
+        console.log('📍 [RIDES] Subscribing to driver location for driver_id:', ride.driver_id);
+
+        // Subscribe using driver_id (primary key in driver_locations table)
         const locationSub = realtimeService.subscribeToDriverLocation(
-          driverUserId,
+          ride.driver_id,
           (location) => {
+            console.log('📍 [RIDES] Driver location update received for ride:', ride.id, location);
             setDriverLocation(location);
             calculateETA(location, ride);
           }
         );
         subscriptions.push(locationSub);
+
+        // Also try to get initial location from database
+        const fetchInitialLocation = async () => {
+          try {
+            const { data: locationData, error } = await supabase
+              .from('driver_locations')
+              .select('*')
+              .eq('driver_id', ride.driver_id)
+              .maybeSingle();
+
+            if (locationData) {
+              console.log('✅ [RIDES] Initial driver location fetched:', locationData);
+              setDriverLocation(locationData);
+              calculateETA(locationData, ride);
+            } else if (error && error.code !== 'PGRST116') {
+              console.error('❌ [RIDES] Error fetching initial location:', error);
+            }
+          } catch (err) {
+            console.error('❌ [RIDES] Exception fetching initial location:', err);
+          }
+        };
+
+        fetchInitialLocation();
       }
     });
 
@@ -467,71 +492,85 @@ export default function RidesScreen() {
         <Text style={styles.statusSubtitle}>{statusInfo.subtitle}</Text>
 
         {/* Live Tracking Map - Show for accepted, driver_arrived, and in_progress rides */}
-        {(ride.drivers || ride.assigned_driver) && driverLocation && selectedRide?.id === ride.id && ['accepted', 'driver_arrived', 'in_progress', 'picked_up'].includes(ride.status) && (
+        {(ride.drivers || ride.assigned_driver) && ['accepted', 'driver_arrived', 'in_progress', 'picked_up'].includes(ride.status) && (
           <View style={styles.mapSection}>
             <Text style={styles.sectionTitle}>
               {ride.status === 'in_progress' || ride.status === 'picked_up' ? '🚗 En Route to Destination' : '📍 Driver Location'}
             </Text>
             <View style={styles.mapContainer}>
-              <EnhancedGoogleMapView
-                initialRegion={{
-                  latitude: ride.pickup_latitude || 12.9716,
-                  longitude: ride.pickup_longitude || 77.5946,
-                  latitudeDelta: 0.02,
-                  longitudeDelta: 0.02,
-                }}
-                pickupCoords={{
-                  latitude: ride.pickup_latitude,
-                  longitude: ride.pickup_longitude,
-                }}
-                destinationCoords={
-                  ride.status === 'in_progress' || ride.status === 'picked_up'
-                    ? ride.destination_latitude && ride.destination_longitude
-                      ? {
-                          latitude: ride.destination_latitude,
-                          longitude: ride.destination_longitude,
-                        }
-                      : undefined
-                    : {
+              {driverLocation ? (
+                <>
+                  <EnhancedGoogleMapView
+                    initialRegion={{
+                      latitude: ride.pickup_latitude || 12.9716,
+                      longitude: ride.pickup_longitude || 77.5946,
+                      latitudeDelta: 0.02,
+                      longitudeDelta: 0.02,
+                    }}
+                    pickupCoords={{
+                      latitude: ride.pickup_latitude,
+                      longitude: ride.pickup_longitude,
+                    }}
+                    destinationCoords={
+                      ride.status === 'in_progress' || ride.status === 'picked_up'
+                        ? ride.destination_latitude && ride.destination_longitude
+                          ? {
+                              latitude: ride.destination_latitude,
+                              longitude: ride.destination_longitude,
+                            }
+                          : undefined
+                        : {
+                            latitude: ride.pickup_latitude,
+                            longitude: ride.pickup_longitude,
+                          }
+                    }
+                    driverLocation={{
+                      latitude: driverLocation.latitude,
+                      longitude: driverLocation.longitude,
+                      heading: driverLocation.heading,
+                    }}
+                    showRoute={true}
+                    style={styles.map}
+                    showUserLocation={false}
+                    followUserLocation={false}
+                  />
+
+                  <View style={styles.liveTrackingOverlay}>
+                    <LiveDriverTracking
+                      driverLocation={{
+                        latitude: driverLocation.latitude,
+                        longitude: driverLocation.longitude,
+                        heading: driverLocation.heading,
+                      }}
+                      pickupLocation={{
                         latitude: ride.pickup_latitude,
                         longitude: ride.pickup_longitude,
-                      }
-                }
-                driverLocation={{
-                  latitude: driverLocation.latitude,
-                  longitude: driverLocation.longitude,
-                  heading: driverLocation.heading,
-                }}
-                showRoute={true}
-                style={styles.map}
-                showUserLocation={false}
-                followUserLocation={false}
-              />
-
-              <View style={styles.liveTrackingOverlay}>
-                <LiveDriverTracking
-                  driverLocation={{
-                    latitude: driverLocation.latitude,
-                    longitude: driverLocation.longitude,
-                    heading: driverLocation.heading,
-                  }}
-                  pickupLocation={{
-                    latitude: ride.pickup_latitude,
-                    longitude: ride.pickup_longitude,
-                    address: ride.pickup_address,
-                  }}
-                  driverInfo={{
-                    name: (ride.drivers?.users?.full_name || ride.assigned_driver?.users?.full_name) || 'Driver',
-                    vehicle: `${(ride.drivers?.vehicles?.make || ride.assigned_driver?.vehicles?.make) || ''} ${(ride.drivers?.vehicles?.model || ride.assigned_driver?.vehicles?.model) || ''}`,
-                    plateNumber: (ride.drivers?.vehicles?.registration_number || ride.assigned_driver?.vehicles?.registration_number) || 'N/A',
-                    phone: (ride.drivers?.users?.phone_number || ride.assigned_driver?.users?.phone_number),
-                  }}
-                />
-              </View>
+                        address: ride.pickup_address,
+                      }}
+                      driverInfo={{
+                        name: (ride.drivers?.users?.full_name || ride.assigned_driver?.users?.full_name) || 'Driver',
+                        vehicle: `${(ride.drivers?.vehicles?.make || ride.assigned_driver?.vehicles?.make) || ''} ${(ride.drivers?.vehicles?.model || ride.assigned_driver?.vehicles?.model) || ''}`,
+                        plateNumber: (ride.drivers?.vehicles?.registration_number || ride.assigned_driver?.vehicles?.registration_number) || 'N/A',
+                        phone: (ride.drivers?.users?.phone_number || ride.assigned_driver?.users?.phone_number),
+                      }}
+                    />
+                  </View>
+                </>
+              ) : (
+                <View style={styles.mapLoadingContainer}>
+                  <ActivityIndicator size="large" color="#2563EB" />
+                  <Text style={styles.mapLoadingText}>Loading driver location...</Text>
+                </View>
+              )}
             </View>
-            {isTracking && lastUpdate && (
+            {isTracking && lastUpdate && driverLocation && (
               <Text style={styles.trackingInfo}>
                 📡 Live tracking • Updated {Math.floor((Date.now() - lastUpdate.getTime()) / 1000)}s ago
+              </Text>
+            )}
+            {!driverLocation && (
+              <Text style={styles.trackingInfo}>
+                📡 Connecting to driver's location...
               </Text>
             )}
           </View>
@@ -980,6 +1019,18 @@ const styles = StyleSheet.create({
   },
   map: {
     flex: 1,
+  },
+  mapLoadingContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    backgroundColor: '#F9FAFB',
+  },
+  mapLoadingText: {
+    marginTop: 12,
+    fontSize: 14,
+    color: '#6B7280',
+    fontWeight: '500',
   },
   liveTrackingOverlay: {
     position: 'absolute',
