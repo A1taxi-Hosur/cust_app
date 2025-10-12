@@ -8,9 +8,7 @@ import {
   Platform,
 } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
-import { Navigation, MapPin, Car } from 'lucide-react-native';
-import AnimatedDriverMarker from './AnimatedDriverMarker';
-import AnimatedETAProgressRing from './AnimatedETAProgressRing';
+import { Car } from 'lucide-react-native';
 
 const { width } = Dimensions.get('window');
 
@@ -144,53 +142,40 @@ export default function LiveDriverTracking({
       ]}
     >
       <LinearGradient colors={['#FFFFFF', '#F9FAFB']} style={styles.card}>
-        <View style={styles.header}>
-          <View style={styles.driverIconContainer}>
-            <Car size={24} color="#2563EB" />
+        {/* Compact ETA Display */}
+        <View style={styles.compactEtaSection}>
+          <View style={styles.etaCircle}>
+            <Text style={styles.etaNumber}>{eta}</Text>
+            <Text style={styles.etaLabel}>min</Text>
           </View>
-          <View style={styles.headerContent}>
-            <Text style={styles.driverName}>{driverInfo.name}</Text>
-            <Text style={styles.vehicleInfo}>
-              {driverInfo.vehicle} • {driverInfo.plateNumber}
+          <View style={styles.etaDetails}>
+            <Text style={styles.etaTitle}>
+              {eta <= 1 ? 'Almost there!' : 'Arriving soon'}
+            </Text>
+            <Text style={styles.etaSubtitle}>
+              {formatDistance(distance)} away
             </Text>
           </View>
         </View>
 
-        <View style={styles.etaSection}>
-          <AnimatedETAProgressRing
-            etaMinutes={eta}
-            maxETA={15}
-            size={100}
-            strokeWidth={6}
-          />
-        </View>
-
-        <View style={styles.infoSection}>
-          <View style={styles.infoCard}>
-            <Navigation size={16} color="#059669" />
-            <View style={styles.infoContent}>
-              <Text style={styles.infoLabel}>Distance</Text>
-              <Text style={styles.infoValue}>{formatDistance(distance)}</Text>
+        {/* Driver Info Row */}
+        <View style={styles.driverRow}>
+          <View style={styles.driverIconSmall}>
+            <Car size={16} color="#2563EB" />
+          </View>
+          <View style={styles.driverInfoCompact}>
+            <Text style={styles.driverNameSmall}>{driverInfo.name}</Text>
+            <Text style={styles.vehicleInfoSmall}>
+              {driverInfo.vehicle} • {driverInfo.plateNumber}
+            </Text>
+          </View>
+          {driverLocation && (
+            <View style={styles.liveIndicatorCompact}>
+              <View style={styles.liveDotSmall} />
+              <Text style={styles.liveTextSmall}>LIVE</Text>
             </View>
-          </View>
-
-          <View style={styles.infoCard}>
-            <MapPin size={16} color="#DC2626" />
-            <View style={styles.infoContent}>
-              <Text style={styles.infoLabel}>Pickup</Text>
-              <Text style={styles.infoValue} numberOfLines={1}>
-                {pickupLocation.address}
-              </Text>
-            </View>
-          </View>
+          )}
         </View>
-
-        {driverLocation && (
-          <View style={styles.liveIndicator}>
-            <View style={styles.liveDot} />
-            <Text style={styles.liveText}>Live tracking</Text>
-          </View>
-        )}
       </LinearGradient>
     </Animated.View>
   );
@@ -198,94 +183,107 @@ export default function LiveDriverTracking({
 
 const styles = StyleSheet.create({
   container: {
-    marginHorizontal: 16,
+    marginHorizontal: 12,
     marginVertical: 8,
   },
   card: {
-    borderRadius: 20,
-    padding: 20,
-    elevation: 4,
+    borderRadius: 16,
+    padding: 16,
+    elevation: 6,
     shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 8,
+    shadowOffset: { width: 0, height: 3 },
+    shadowOpacity: 0.15,
+    shadowRadius: 12,
   },
-  header: {
+  // Compact ETA Section
+  compactEtaSection: {
     flexDirection: 'row',
     alignItems: 'center',
-    marginBottom: 20,
+    marginBottom: 12,
+    paddingBottom: 12,
+    borderBottomWidth: 1,
+    borderBottomColor: '#E5E7EB',
   },
-  driverIconContainer: {
-    width: 48,
-    height: 48,
-    borderRadius: 24,
-    backgroundColor: '#EFF6FF',
+  etaCircle: {
+    width: 60,
+    height: 60,
+    borderRadius: 30,
+    backgroundColor: '#10B981',
     justifyContent: 'center',
     alignItems: 'center',
     marginRight: 12,
   },
-  headerContent: {
+  etaNumber: {
+    fontSize: 24,
+    fontWeight: 'bold',
+    color: '#FFFFFF',
+    lineHeight: 28,
+  },
+  etaLabel: {
+    fontSize: 10,
+    fontWeight: '600',
+    color: '#FFFFFF',
+    opacity: 0.9,
+  },
+  etaDetails: {
     flex: 1,
   },
-  driverName: {
-    fontSize: 18,
+  etaTitle: {
+    fontSize: 16,
     fontWeight: 'bold',
     color: '#1F2937',
-    marginBottom: 4,
-  },
-  vehicleInfo: {
-    fontSize: 14,
-    color: '#6B7280',
-  },
-  etaSection: {
-    alignItems: 'center',
-    marginBottom: 20,
-  },
-  infoSection: {
-    gap: 12,
-  },
-  infoCard: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: '#F9FAFB',
-    borderRadius: 12,
-    padding: 12,
-  },
-  infoContent: {
-    marginLeft: 12,
-    flex: 1,
-  },
-  infoLabel: {
-    fontSize: 12,
-    color: '#6B7280',
     marginBottom: 2,
   },
-  infoValue: {
+  etaSubtitle: {
+    fontSize: 13,
+    color: '#6B7280',
+  },
+  // Driver Info Row
+  driverRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  driverIconSmall: {
+    width: 32,
+    height: 32,
+    borderRadius: 16,
+    backgroundColor: '#EFF6FF',
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginRight: 10,
+  },
+  driverInfoCompact: {
+    flex: 1,
+  },
+  driverNameSmall: {
     fontSize: 14,
     fontWeight: '600',
     color: '#1F2937',
+    marginBottom: 2,
   },
-  liveIndicator: {
+  vehicleInfoSmall: {
+    fontSize: 12,
+    color: '#6B7280',
+  },
+  liveIndicatorCompact: {
     flexDirection: 'row',
     alignItems: 'center',
-    justifyContent: 'center',
-    marginTop: 16,
-    paddingTop: 16,
-    borderTopWidth: 1,
-    borderTopColor: '#E5E7EB',
+    backgroundColor: '#FEE2E2',
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    borderRadius: 12,
   },
-  liveDot: {
-    width: 8,
-    height: 8,
-    borderRadius: 4,
+  liveDotSmall: {
+    width: 6,
+    height: 6,
+    borderRadius: 3,
     backgroundColor: '#EF4444',
-    marginRight: 8,
+    marginRight: 4,
   },
-  liveText: {
-    fontSize: 12,
-    fontWeight: '600',
+  liveTextSmall: {
+    fontSize: 10,
+    fontWeight: '700',
     color: '#EF4444',
-    textTransform: 'uppercase',
     letterSpacing: 0.5,
   },
 });

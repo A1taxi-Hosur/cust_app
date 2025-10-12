@@ -1007,9 +1007,9 @@ const styles = StyleSheet.create({
     marginBottom: 20,
   },
   mapContainer: {
-    height: 400,
+    height: 450,
     borderRadius: 16,
-    overflow: 'hidden',
+    overflow: 'visible',
     elevation: 4,
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 2 },
@@ -1034,9 +1034,10 @@ const styles = StyleSheet.create({
   },
   liveTrackingOverlay: {
     position: 'absolute',
-    bottom: 0,
+    bottom: 12,
     left: 0,
     right: 0,
+    zIndex: 10,
   },
   trackingInfo: {
     fontSize: 12,
