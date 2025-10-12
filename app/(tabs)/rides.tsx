@@ -491,6 +491,35 @@ export default function RidesScreen() {
 
         <Text style={styles.statusSubtitle}>{statusInfo.subtitle}</Text>
 
+        {/* OTP Display - Moved to Top */}
+        {ride.pickup_otp && (
+          <View style={styles.otpSection}>
+            <Text style={styles.sectionTitle}>🔑 Trip OTP</Text>
+            <View style={styles.otpCard}>
+              <View style={styles.otpItem}>
+                <Text style={styles.otpLabel}>Pickup OTP:</Text>
+                <Text style={styles.otpCode}>{ride.pickup_otp}</Text>
+              </View>
+              <Text style={styles.otpInstructions}>
+                Share this OTP with your driver when they arrive.
+              </Text>
+            </View>
+          </View>
+        )}
+
+        {/* OTP Status based on ride status */}
+        {ride.status === 'driver_arrived' && !ride.pickup_otp && (
+          <View style={styles.otpPendingSection}>
+            <Text style={styles.sectionTitle}>⏳ Waiting for Pickup OTP</Text>
+            <View style={styles.otpPendingCard}>
+              <ActivityIndicator size="small" color="#F59E0B" />
+              <Text style={styles.otpPendingText}>
+                Driver will generate pickup OTP when ready
+              </Text>
+            </View>
+          </View>
+        )}
+
         {/* Live Tracking Map - Show for accepted, driver_arrived, and in_progress rides */}
         {(ride.drivers || ride.assigned_driver) && ['accepted', 'driver_arrived', 'in_progress', 'picked_up'].includes(ride.status) && (
           <View style={styles.mapSection}>
@@ -676,35 +705,6 @@ export default function RidesScreen() {
             </View>
           </View>
         </View>
-
-        {/* OTP Display */}
-        {ride.pickup_otp && (
-          <View style={styles.otpSection}>
-            <Text style={styles.sectionTitle}>Trip OTP</Text>
-            <View style={styles.otpCard}>
-              <View style={styles.otpItem}>
-                <Text style={styles.otpLabel}>Pickup OTP:</Text>
-                <Text style={styles.otpCode}>{ride.pickup_otp}</Text>
-              </View>
-              <Text style={styles.otpInstructions}>
-                Share the pickup OTP with your driver when they arrive.
-              </Text>
-            </View>
-          </View>
-        )}
-
-        {/* OTP Status based on ride status */}
-        {ride.status === 'driver_arrived' && !ride.pickup_otp && (
-          <View style={styles.otpPendingSection}>
-            <Text style={styles.sectionTitle}>Waiting for Pickup OTP</Text>
-            <View style={styles.otpPendingCard}>
-              <ActivityIndicator size="small" color="#F59E0B" />
-              <Text style={styles.otpPendingText}>
-                Driver will generate pickup OTP when ready
-              </Text>
-            </View>
-          </View>
-        )}
       </View>
     );
   };
@@ -1219,11 +1219,19 @@ const styles = StyleSheet.create({
   },
   otpSection: {
     marginBottom: 20,
+    marginTop: 12,
   },
   otpCard: {
-    backgroundColor: '#F0F9FF',
+    backgroundColor: '#DBEAFE',
     borderRadius: 16,
     padding: 20,
+    borderWidth: 2,
+    borderColor: '#3B82F6',
+    elevation: 4,
+    shadowColor: '#3B82F6',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.2,
+    shadowRadius: 8,
   },
   otpItem: {
     flexDirection: 'row',
@@ -1231,28 +1239,35 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     backgroundColor: '#FFFFFF',
     borderRadius: 12,
-    padding: 16,
-    marginBottom: 8,
+    padding: 18,
+    marginBottom: 12,
+    elevation: 2,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
   },
   otpLabel: {
     fontSize: 16,
-    color: '#374151',
+    fontWeight: '600',
+    color: '#1F2937',
   },
   otpCode: {
-    fontSize: 24,
+    fontSize: 32,
     fontWeight: 'bold',
     color: '#2563EB',
     fontFamily: 'monospace',
+    letterSpacing: 4,
   },
   otpInstructions: {
-    fontSize: 12,
-    color: '#6B7280',
+    fontSize: 13,
+    color: '#1F2937',
     textAlign: 'center',
-    marginTop: 8,
-    fontStyle: 'italic',
+    fontWeight: '500',
   },
   otpPendingSection: {
     marginBottom: 20,
+    marginTop: 12,
   },
   otpPendingCard: {
     backgroundColor: '#FEF3C7',
@@ -1261,11 +1276,19 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
+    borderWidth: 2,
+    borderColor: '#F59E0B',
+    elevation: 3,
+    shadowColor: '#F59E0B',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.15,
+    shadowRadius: 6,
   },
   otpPendingText: {
     fontSize: 14,
-    color: '#6B7280',
-    marginLeft: 8,
+    fontWeight: '500',
+    color: '#92400E',
+    marginLeft: 10,
     textAlign: 'center',
   },
   loadingContainer: {
