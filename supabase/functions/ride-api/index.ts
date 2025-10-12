@@ -124,7 +124,18 @@ async function createRide(req: Request, supabase: any) {
 async function cancelRide(req: Request, supabase: any) {
   const { rideId, userId, reason } = await req.json();
 
-  console.log('🚫 [EDGE] cancelRide called:', { rideId, userId, reason });
+  console.log('🚫 [EDGE] cancelRide called:', {
+    rideId,
+    rideIdType: typeof rideId,
+    userId,
+    userIdType: typeof userId,
+    reason
+  });
+
+  if (!rideId) {
+    console.error('🚫 [EDGE] No rideId provided');
+    throw new Error('rideId is required');
+  }
 
   // First, get the current ride to check driver assignment
   const { data: currentRide, error: fetchError } = await supabase
@@ -133,12 +144,27 @@ async function cancelRide(req: Request, supabase: any) {
     .eq('id', rideId)
     .maybeSingle();
 
+  console.log('🚫 [EDGE] Ride query result:', {
+    found: !!currentRide,
+    error: fetchError,
+    rideData: currentRide
+  });
+
   if (fetchError) {
     console.error('🚫 [EDGE] Error fetching ride:', fetchError);
     throw fetchError;
   }
 
   if (!currentRide) {
+    // Log all pending rides for debugging
+    const { data: allPendingRides } = await supabase
+      .from('rides')
+      .select('id, status, customer_id')
+      .eq('status', 'pending')
+      .limit(5);
+
+    console.error('🚫 [EDGE] Ride not found. Searched for:', rideId);
+    console.error('🚫 [EDGE] Found pending rides:', allPendingRides);
     throw new Error('Ride not found');
   }
 
