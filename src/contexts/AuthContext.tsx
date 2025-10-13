@@ -339,11 +339,11 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       setSession(null);
       setUser(null);
 
-      console.log('✅ Sign out completed, refreshing app...');
+      console.log('✅ Sign out completed, redirecting to login...');
 
-      // Refresh app to clear all state
+      // Navigate to login
       setTimeout(() => {
-        refreshApp();
+        router.replace('/auth/login');
       }, 100);
     } catch (error) {
       console.error('Error signing out:', error);
@@ -363,9 +363,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         keysToRemove.forEach(key => localStorage.removeItem(key));
       }
 
-      // Refresh app to clear all state
+      // Navigate to login
       setTimeout(() => {
-        refreshApp();
+        router.replace('/auth/login');
       }, 100);
     }
   };

@@ -113,11 +113,9 @@ export default function VerifyOTPScreen() {
         console.log('✅ Setting authenticated user in context with UUID:', userData.id);
         setAuthenticatedUser(userData);
 
-        console.log('✅ Customer data saved, refreshing app...');
+        console.log('✅ Customer data saved, navigating to home...');
         setLoading(false);
-
-        // Refresh app to load fresh data
-        setTimeout(() => refreshApp(), 500);
+        router.replace('/(tabs)');
       } else {
         Alert.alert('Error', 'Verification failed');
         setLoading(false);

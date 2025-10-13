@@ -1133,8 +1133,6 @@ export default function DriverSearchScreen() {
             onAnimationComplete={() => {
               setShowCelebration(false);
               setSearchStatus('found');
-              // Refresh app to load fresh driver data
-              setTimeout(() => refreshApp(), 1000);
             }}
           />
         )}
