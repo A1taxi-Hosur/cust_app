@@ -206,7 +206,15 @@ export default function RidesScreen() {
             return;
           }
 
-          // Update the ride in the activeRides array
+          // For important status changes, refresh full data to get driver details
+          const importantStatuses = ['assigned', 'driver_arrived', 'picked_up', 'in_progress'];
+          if (importantStatuses.includes(updatedBooking.status)) {
+            console.log('🔔 [RIDES] Important status change detected, refreshing full data');
+            setTimeout(() => fetchActiveRides(), 500);
+            return;
+          }
+
+          // For other updates, just update the status fields
           setActiveRides(prev => prev.map(r =>
             r.id === updatedBooking.id
               ? {
@@ -218,10 +226,6 @@ export default function RidesScreen() {
                 }
               : r
           ));
-          // Refresh to get full driver details if driver was just assigned
-          if (updatedBooking.status === 'assigned' && updatedBooking.assigned_driver_id) {
-            setTimeout(() => fetchActiveRides(), 1000);
-          }
         });
         subscriptions.push(statusSub);
       } else if (ride.id) {
@@ -236,7 +240,15 @@ export default function RidesScreen() {
             return;
           }
 
-          // Update the ride in the activeRides array
+          // For important status changes, refresh full ride data to get driver details
+          const importantStatuses = ['accepted', 'driver_arrived', 'picked_up', 'in_progress'];
+          if (importantStatuses.includes(updatedRide.status)) {
+            console.log('🔔 [RIDES] Important status change detected, refreshing full data');
+            setTimeout(() => fetchActiveRides(), 500);
+            return;
+          }
+
+          // For other updates, just update the status fields
           setActiveRides(prev => prev.map(r =>
             r.id === updatedRide.id
               ? {
