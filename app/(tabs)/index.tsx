@@ -1156,14 +1156,26 @@ export default function HomeScreen() {
 
   // Extract zone validation logic into separate function
   const validateDestinationZone = (location: string, coords: { latitude: number; longitude: number }) => {
-    console.log('🔍 Validating destination zone for:', { location, coords });
-    console.log('🔍 Active zones available:', activeZones.length, activeZones.map(z => z.name));
+    console.log('🔍 [ZONE-VALIDATION] Starting destination zone validation');
+    console.log('🔍 [ZONE-VALIDATION] Location:', location);
+    console.log('🔍 [ZONE-VALIDATION] Coordinates:', coords);
+    console.log('🔍 [ZONE-VALIDATION] Active zones available:', activeZones.length);
+    console.log('🔍 [ZONE-VALIDATION] Zone names:', activeZones.map(z => z.name));
+    console.log('🔍 [ZONE-VALIDATION] Full zone data:', JSON.stringify(activeZones, null, 2));
+
+    // Check if zones are loaded
+    if (!activeZones || activeZones.length === 0) {
+      console.warn('⚠️ [ZONE-VALIDATION] No active zones loaded! Allowing destination by default.');
+      setDestinationLocation(location);
+      setDestinationCoords(coords);
+      return;
+    }
 
     // Validate destination is within active zones
     const isDestinationInZone = isPointInAnyActiveZone(coords, activeZones);
 
     if (!isDestinationInZone) {
-      console.log('❌ Destination location is out of service zone:', coords);
+      console.log('❌ [ZONE-VALIDATION] Destination location is out of service zone:', coords);
       showCustomAlert(
         'Out of Service Area',
         'This destination is outside our Outer Ring service area (12.4km radius from Hosur center). Please book an Outstation ride for destinations beyond this area.',
@@ -1183,7 +1195,7 @@ export default function HomeScreen() {
       return; // Don't set the destination if it's out of zone
     }
 
-    console.log('✅ Destination location is within active zones');
+    console.log('✅ [ZONE-VALIDATION] Destination location is within active zones');
     setDestinationLocation(location);
     setDestinationCoords(coords);
   };

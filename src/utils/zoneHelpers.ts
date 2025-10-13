@@ -30,11 +30,36 @@ export function isPointInAnyActiveZone(
   // Check if zone is a circle type (our current format)
   if (outerRing.coordinates?.type === 'circle') {
     console.log('🔍 Using circle-based zone validation');
+    console.log('🔍 Raw Outer Ring data:', {
+      center_latitude: outerRing.center_latitude,
+      center_latitude_type: typeof outerRing.center_latitude,
+      center_longitude: outerRing.center_longitude,
+      center_longitude_type: typeof outerRing.center_longitude,
+      radius_km: outerRing.radius_km,
+      radius_km_type: typeof outerRing.radius_km,
+    });
+
+    const centerLat = typeof outerRing.center_latitude === 'string'
+      ? parseFloat(outerRing.center_latitude)
+      : outerRing.center_latitude;
+    const centerLng = typeof outerRing.center_longitude === 'string'
+      ? parseFloat(outerRing.center_longitude)
+      : outerRing.center_longitude;
+    const radiusKm = typeof outerRing.radius_km === 'string'
+      ? parseFloat(outerRing.radius_km)
+      : outerRing.radius_km;
+
+    console.log('🔍 Parsed values:', {
+      centerLat,
+      centerLng,
+      radiusKm,
+      allValid: !isNaN(centerLat) && !isNaN(centerLng) && !isNaN(radiusKm)
+    });
+
     const center = {
-      latitude: parseFloat(outerRing.center_latitude),
-      longitude: parseFloat(outerRing.center_longitude)
+      latitude: centerLat,
+      longitude: centerLng
     };
-    const radiusKm = parseFloat(outerRing.radius_km);
 
     const isInside = isPointInCircle(coordinates, center, radiusKm);
     console.log(`🔍 Point is ${isInside ? 'INSIDE' : 'OUTSIDE'} Outer Ring (${radiusKm}km radius)`);
