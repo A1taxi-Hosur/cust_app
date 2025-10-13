@@ -504,6 +504,9 @@ export default function DriverSearchScreen() {
           clearInterval(intervalId);
           setPollingIntervalId(null);
 
+          // Force state update first to trigger re-render
+          setSearchStatus('found');
+
           // Fetch driver details and trigger navigation
           await fetchAssignedDriverDetails(bookingData.assigned_driver_id, bookingData);
         }
@@ -753,11 +756,16 @@ export default function DriverSearchScreen() {
         };
         console.log('🎉 [DRIVER_SEARCH] Setting driver data and triggering celebration');
         console.log('🎉 Driver Data:', newDriverData);
+
+        // Update all states synchronously
         setDriverData(newDriverData);
         setShowCelebration(true);
         setSearchStatus('celebrating');
         setInitialCheckComplete(true);
+
+        // Force component to acknowledge the state change
         console.log('🎉 State updated - showCelebration: true, searchStatus: celebrating');
+        console.log('🎉 Component should re-render now with celebration animation');
 
         if (driverDetails.user_id) {
           startDriverLocationPolling(driverDetails.user_id);
@@ -849,12 +857,14 @@ export default function DriverSearchScreen() {
   };
 
   // Add debug logging for render
-  console.log('🚨 [DEBUG] DriverSearchScreen about to render with state:', {
+  console.log('🚨 [DEBUG] DriverSearchScreen RENDER with state:', {
     searchStatus,
     hasDriverData: !!driverData,
+    showCelebration,
     initialCheckComplete,
-    loading: false, // Add if you have loading state
-    rideDetailsValid: !!(rideDetails.rideId || rideDetails.bookingId)
+    driverName: driverData?.name,
+    rideDetailsValid: !!(rideDetails.rideId || rideDetails.bookingId),
+    timestamp: new Date().toISOString()
   });
 
   // Add early return for debugging
