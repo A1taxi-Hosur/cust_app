@@ -405,6 +405,7 @@ export default function DriverSearchScreen() {
 
         if (error) {
           console.error('🚨 [DEBUG] Ride polling error:', error);
+          console.error('🚨 [DEBUG] Error code:', error.code, 'message:', error.message);
 
           // If it's a network error, don't spam the console
           if (error.message?.includes('Failed to fetch') || error.message?.includes('fetch')) {
@@ -415,6 +416,7 @@ export default function DriverSearchScreen() {
           return;
         }
 
+        console.log('🔍 [DRIVER_SEARCH] Polled ride data:', rideData);
         console.log('🔍 [DRIVER_SEARCH] Polled ride status:', rideData?.status, 'driver_id:', rideData?.driver_id);
 
         if (rideData && rideData.status === 'accepted' && rideData.driver_id) {
