@@ -751,10 +751,13 @@ export default function DriverSearchScreen() {
             type: driverDetails.vehicles?.vehicle_type || '',
           },
         };
+        console.log('🎉 [DRIVER_SEARCH] Setting driver data and triggering celebration');
+        console.log('🎉 Driver Data:', newDriverData);
         setDriverData(newDriverData);
         setShowCelebration(true);
         setSearchStatus('celebrating');
         setInitialCheckComplete(true);
+        console.log('🎉 State updated - showCelebration: true, searchStatus: celebrating');
 
         if (driverDetails.user_id) {
           startDriverLocationPolling(driverDetails.user_id);
