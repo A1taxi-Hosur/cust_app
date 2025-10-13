@@ -5,6 +5,14 @@ import { Platform } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { supabase } from '../utils/supabase';
 
+// Utility function to refresh the app
+const refreshApp = () => {
+  if (Platform.OS === 'web') {
+    console.log('🔄 Refreshing app...');
+    window.location.reload();
+  }
+};
+
 interface AuthContextType {
   session: Session | null;
   user: any | null;
@@ -217,6 +225,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       console.log('📱 SMS Error:', data.smsError);
       console.log('📱 ===== SEND OTP COMPLETE =====');
 
+      // Refresh app to clear any cached state
+      setTimeout(() => refreshApp(), 500);
+
       return { error: null, otp: data.devOtp, smsSent: data.smsSent, smsError: data.smsError };
     } catch (error) {
       console.error('📱 ❌ Error sending OTP:', error);
@@ -330,12 +341,12 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
       setSession(null);
       setUser(null);
-      
-      console.log('✅ Sign out completed, redirecting to login...');
-      
-      // Force navigation to login with a small delay to ensure state is cleared
+
+      console.log('✅ Sign out completed, refreshing app...');
+
+      // Refresh app to clear all state
       setTimeout(() => {
-        router.replace('/auth/login');
+        refreshApp();
       }, 100);
     } catch (error) {
       console.error('Error signing out:', error);
@@ -354,8 +365,11 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         }
         keysToRemove.forEach(key => localStorage.removeItem(key));
       }
-      
-      router.replace('/auth/login');
+
+      // Refresh app to clear all state
+      setTimeout(() => {
+        refreshApp();
+      }, 100);
     }
   };
 

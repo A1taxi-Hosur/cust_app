@@ -22,6 +22,14 @@ import DriverArrivingAnimation from '../../src/components/DriverArrivingAnimatio
 import AnimatedETAProgressRing from '../../src/components/AnimatedETAProgressRing';
 import LiveDriverTracking from '../../src/components/LiveDriverTracking';
 
+// Utility function to refresh the app
+const refreshApp = () => {
+  if (Platform.OS === 'web') {
+    console.log('🔄 Refreshing app after driver found...');
+    window.location.reload();
+  }
+};
+
 // Add debug logging for component lifecycle
 console.log('🚨 [DEBUG] DriverSearchScreen module loaded');
 
@@ -1125,6 +1133,8 @@ export default function DriverSearchScreen() {
             onAnimationComplete={() => {
               setShowCelebration(false);
               setSearchStatus('found');
+              // Refresh app to load fresh driver data
+              setTimeout(() => refreshApp(), 1000);
             }}
           />
         )}
