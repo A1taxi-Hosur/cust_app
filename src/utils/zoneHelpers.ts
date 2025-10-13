@@ -11,29 +11,51 @@ export function isPointInAnyActiveZone(
   console.log('🔍 Checking if point is in service area:', {
     coordinates,
     zonesCount: zones.length,
-    zones: zones.map(z => ({ name: z.name, hasPolygon: !!z.coordinates?.coordinates }))
+    zones: zones.map(z => ({
+      name: z.name,
+      type: z.coordinates?.type,
+      radius_km: z.radius_km,
+      center_lat: z.center_latitude,
+      center_lng: z.center_longitude
+    }))
   });
 
   const outerRing = zones.find(z => z.name === 'Outer Ring');
 
   if (!outerRing) {
-    console.warn('⚠️ Outer Ring zone not found, allowing location by default');
-    return true;
+    console.warn('⚠️ Outer Ring zone not found, denying location by default');
+    return false;
   }
 
-  if (!outerRing.coordinates || !outerRing.coordinates.coordinates) {
-    console.warn('⚠️ Outer Ring has no polygon coordinates, falling back to radius check');
-    return isPointInCircle(
-      coordinates,
-      { latitude: outerRing.center_latitude, longitude: outerRing.center_longitude },
-      outerRing.radius_km
-    );
+  // Check if zone is a circle type (our current format)
+  if (outerRing.coordinates?.type === 'circle') {
+    console.log('🔍 Using circle-based zone validation');
+    const center = {
+      latitude: parseFloat(outerRing.center_latitude),
+      longitude: parseFloat(outerRing.center_longitude)
+    };
+    const radiusKm = parseFloat(outerRing.radius_km);
+
+    const isInside = isPointInCircle(coordinates, center, radiusKm);
+    console.log(`🔍 Point is ${isInside ? 'INSIDE' : 'OUTSIDE'} Outer Ring (${radiusKm}km radius)`);
+    return isInside;
   }
 
-  const isInside = isPointInPolygon(coordinates, outerRing.coordinates.coordinates);
-  console.log(`🔍 Point is ${isInside ? 'INSIDE' : 'OUTSIDE'} Outer Ring polygon`);
+  // Fallback to polygon check if coordinates exist
+  if (outerRing.coordinates?.coordinates) {
+    console.log('🔍 Using polygon-based zone validation');
+    const isInside = isPointInPolygon(coordinates, outerRing.coordinates.coordinates);
+    console.log(`🔍 Point is ${isInside ? 'INSIDE' : 'OUTSIDE'} Outer Ring polygon`);
+    return isInside;
+  }
 
-  return isInside;
+  // Final fallback to direct radius check
+  console.warn('⚠️ Outer Ring has no valid coordinates, using direct radius check');
+  return isPointInCircle(
+    coordinates,
+    { latitude: parseFloat(outerRing.center_latitude), longitude: parseFloat(outerRing.center_longitude) },
+    parseFloat(outerRing.radius_km)
+  );
 }
 
 /**
@@ -72,13 +94,14 @@ export function isPointInCircle(
   );
 
   const isInside = distance <= radiusKm;
-  
+
   console.log('🔍 Circle zone check:', {
     point,
     center,
-    radiusKm,
-    distance: distance.toFixed(2) + 'km',
-    isInside
+    radiusKm: radiusKm + 'km',
+    calculatedDistance: distance.toFixed(2) + 'km',
+    difference: (distance - radiusKm).toFixed(2) + 'km',
+    isInside: isInside ? '✅ INSIDE' : '❌ OUTSIDE'
   });
 
   return isInside;

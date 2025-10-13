@@ -892,30 +892,33 @@ export default function HomeScreen() {
 
       // Step 3: Validate pickup location is within active zones
       console.log('🔍 Validating pickup location against active zones...');
+      console.log('🔍 Active zones loaded:', activeZones.length, activeZones.map(z => z.name));
       const isPickupInZone = isPointInAnyActiveZone(pickupValidationCoords, activeZones);
-      
+
       if (!isPickupInZone) {
-        console.log('❌ Pickup location is out of zone:', pickupValidationCoords);
-        console.log('🚨 [DEBUG] About to show pickup out-of-zone custom alert');
-        showCustomAlert('Service Unavailable', 'Sorry! We are not available at this pickup location at the moment.', 'warning');
-        console.log('🚨 [DEBUG] Custom alert called for pickup out-of-zone');
+        console.log('❌ Pickup location is out of service zone:', pickupValidationCoords);
+        showCustomAlert(
+          'Service Unavailable',
+          'Sorry! Your pickup location is outside our Outer Ring service area (12.4km radius from Hosur center). We can only pickup within this zone for regular rides.',
+          'warning'
+        );
         setLoading(false);
         return;
       }
-      
+
       console.log('✅ Pickup location is within active zones');
 
       // Step 4: Validate destination location is within active zones
       console.log('🔍 Validating destination location against active zones...');
       console.log('🔍 Destination coords for validation:', destinationValidationCoords);
+      console.log('🔍 Active zones for destination check:', activeZones.length, activeZones.map(z => z.name));
       const isDestinationInZone = isPointInAnyActiveZone(destinationValidationCoords, activeZones);
-      
+
       if (!isDestinationInZone) {
-        console.log('❌ Destination location is out of zone:', destinationValidationCoords);
-        console.log('🚨 [DEBUG] About to show destination out-of-zone custom alert');
+        console.log('❌ Destination location is out of service zone:', destinationValidationCoords);
         showCustomAlert(
-          'Out of Service Area', 
-          'This destination is outside our service area. Please try booking an outstation ride instead.',
+          'Out of Service Area',
+          'This destination is outside our Outer Ring service area (12.4km radius from Hosur center). Please book an Outstation ride for destinations beyond this area.',
           'warning',
           [
             { text: 'Book Outstation', onPress: () => router.push({
@@ -1154,15 +1157,16 @@ export default function HomeScreen() {
   // Extract zone validation logic into separate function
   const validateDestinationZone = (location: string, coords: { latitude: number; longitude: number }) => {
     console.log('🔍 Validating destination zone for:', { location, coords });
-    
+    console.log('🔍 Active zones available:', activeZones.length, activeZones.map(z => z.name));
+
     // Validate destination is within active zones
     const isDestinationInZone = isPointInAnyActiveZone(coords, activeZones);
-    
+
     if (!isDestinationInZone) {
-      console.log('❌ Destination location is out of zone:', coords);
+      console.log('❌ Destination location is out of service zone:', coords);
       showCustomAlert(
-        'Out of Service Area', 
-        'This destination is outside our service area. Please try booking an outstation ride instead.',
+        'Out of Service Area',
+        'This destination is outside our Outer Ring service area (12.4km radius from Hosur center). Please book an Outstation ride for destinations beyond this area.',
         'warning',
         [
           { text: 'Book Outstation', onPress: () => router.push({
@@ -1178,7 +1182,7 @@ export default function HomeScreen() {
       );
       return; // Don't set the destination if it's out of zone
     }
-    
+
     console.log('✅ Destination location is within active zones');
     setDestinationLocation(location);
     setDestinationCoords(coords);

@@ -5,10 +5,10 @@ export interface Zone {
   name: string;
   city: string;
   state: string;
-  coordinates: any; // GeoJSON polygon coordinates
-  center_latitude: number;
-  center_longitude: number;
-  radius_km: number;
+  coordinates: any; // Can be circle or polygon format
+  center_latitude: number | string;
+  center_longitude: number | string;
+  radius_km: number | string;
   is_active: boolean;
 }
 
