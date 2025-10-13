@@ -225,9 +225,6 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       console.log('📱 SMS Error:', data.smsError);
       console.log('📱 ===== SEND OTP COMPLETE =====');
 
-      // Refresh app to clear any cached state
-      setTimeout(() => refreshApp(), 500);
-
       return { error: null, otp: data.devOtp, smsSent: data.smsSent, smsError: data.smsError };
     } catch (error) {
       console.error('📱 ❌ Error sending OTP:', error);

@@ -17,6 +17,14 @@ import { Car, ArrowLeft } from 'lucide-react-native';
 import { useAuth } from '../../src/contexts/AuthContext';
 import { useRouter, useLocalSearchParams } from 'expo-router';
 
+// Utility function to refresh the app
+const refreshApp = () => {
+  if (Platform.OS === 'web') {
+    console.log('🔄 Refreshing app after successful login...');
+    window.location.reload();
+  }
+};
+
 export default function VerifyOTPScreen() {
   const [otp, setOtp] = useState(['', '', '', '', '', '']);
   const [loading, setLoading] = useState(false);
@@ -105,9 +113,11 @@ export default function VerifyOTPScreen() {
         console.log('✅ Setting authenticated user in context with UUID:', userData.id);
         setAuthenticatedUser(userData);
 
-        console.log('✅ Customer data saved, navigating to home...');
+        console.log('✅ Customer data saved, refreshing app...');
         setLoading(false);
-        router.replace('/(tabs)');
+
+        // Refresh app to load fresh data
+        setTimeout(() => refreshApp(), 500);
       } else {
         Alert.alert('Error', 'Verification failed');
         setLoading(false);
