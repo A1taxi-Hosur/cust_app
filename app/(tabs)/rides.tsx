@@ -231,7 +231,12 @@ export default function RidesScreen() {
       } else if (ride.id) {
         console.log('📡 [RIDES] Subscribing to ride updates:', ride.id);
         const statusSub = realtimeService.subscribeToRide(ride.id, (updatedRide) => {
-          console.log('🔔 [RIDES] Ride update received:', updatedRide);
+          console.log('🔔 [RIDES] ===== REAL-TIME RIDE UPDATE RECEIVED =====');
+          console.log('🔔 [RIDES] Ride ID:', updatedRide.id);
+          console.log('🔔 [RIDES] New Status:', updatedRide.status);
+          console.log('🔔 [RIDES] Pickup OTP:', updatedRide.pickup_otp);
+          console.log('🔔 [RIDES] Drop OTP:', updatedRide.drop_otp);
+          console.log('🔔 [RIDES] Driver ID:', updatedRide.driver_id);
 
           // If ride is cancelled or completed, remove from active rides
           if (updatedRide.status === 'cancelled' || updatedRide.status === 'completed') {
@@ -243,23 +248,28 @@ export default function RidesScreen() {
           // For important status changes, refresh full ride data to get driver details
           const importantStatuses = ['accepted', 'driver_arrived', 'picked_up', 'in_progress'];
           if (importantStatuses.includes(updatedRide.status)) {
-            console.log('🔔 [RIDES] Important status change detected, refreshing full data');
+            console.log('🔔 [RIDES] ⚡ Important status change detected, refreshing full data');
             setTimeout(() => fetchActiveRides(), 500);
             return;
           }
 
           // For other updates, just update the status fields
-          setActiveRides(prev => prev.map(r =>
-            r.id === updatedRide.id
-              ? {
-                  ...r,
-                  status: updatedRide.status,
-                  pickup_otp: updatedRide.pickup_otp,
-                  drop_otp: updatedRide.drop_otp,
-                  driver_id: updatedRide.driver_id,
-                }
-              : r
-          ));
+          console.log('🔔 [RIDES] Updating ride in state with new fields');
+          setActiveRides(prev => {
+            const updated = prev.map(r =>
+              r.id === updatedRide.id
+                ? {
+                    ...r,
+                    status: updatedRide.status,
+                    pickup_otp: updatedRide.pickup_otp,
+                    drop_otp: updatedRide.drop_otp,
+                    driver_id: updatedRide.driver_id,
+                  }
+                : r
+            );
+            console.log('🔔 [RIDES] State updated, new activeRides count:', updated.length);
+            return updated;
+          });
         });
         subscriptions.push(statusSub);
       }
