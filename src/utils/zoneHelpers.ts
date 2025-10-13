@@ -96,10 +96,20 @@ function isPointInZone(
   }
 
   // Fallback to circular zone check using center and radius
+  const centerLat = typeof zone.center_latitude === 'string'
+    ? parseFloat(zone.center_latitude)
+    : zone.center_latitude;
+  const centerLng = typeof zone.center_longitude === 'string'
+    ? parseFloat(zone.center_longitude)
+    : zone.center_longitude;
+  const radiusKm = typeof zone.radius_km === 'string'
+    ? parseFloat(zone.radius_km)
+    : zone.radius_km;
+
   return isPointInCircle(
     coordinates,
-    { latitude: zone.center_latitude, longitude: zone.center_longitude },
-    zone.radius_km
+    { latitude: centerLat, longitude: centerLng },
+    radiusKm
   );
 }
 
@@ -111,12 +121,37 @@ export function isPointInCircle(
   center: { latitude: number; longitude: number },
   radiusKm: number
 ): boolean {
+  // Validate inputs
+  if (isNaN(point.latitude) || isNaN(point.longitude)) {
+    console.error('❌ Invalid point coordinates:', point);
+    return false;
+  }
+
+  if (isNaN(center.latitude) || isNaN(center.longitude)) {
+    console.error('❌ Invalid center coordinates:', center);
+    return false;
+  }
+
+  if (isNaN(radiusKm) || radiusKm <= 0) {
+    console.error('❌ Invalid radius:', radiusKm);
+    return false;
+  }
+
   const distance = calculateHaversineDistance(
     point.latitude,
     point.longitude,
     center.latitude,
     center.longitude
   );
+
+  if (isNaN(distance)) {
+    console.error('❌ Haversine calculation returned NaN:', {
+      point,
+      center,
+      radiusKm
+    });
+    return false;
+  }
 
   const isInside = distance <= radiusKm;
 
