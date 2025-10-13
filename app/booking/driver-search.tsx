@@ -378,28 +378,14 @@ export default function DriverSearchScreen() {
           return;
         }
 
+        // Check auth state before querying
+        const { data: { user: currentUser } } = await supabase.auth.getUser();
+        console.log('🚨 [DEBUG] Current auth user:', currentUser?.id, currentUser?.email);
+
+        // First try simple query to test auth
         const { data: rideData, error } = await supabase
           .from('rides')
-          .select(`
-            *,
-            drivers!rides_driver_id_fkey (
-              id,
-              user_id,
-              rating,
-              total_rides,
-              users!drivers_user_id_fkey (
-                full_name,
-                phone_number
-              ),
-              vehicles!fk_drivers_vehicle (
-                make,
-                model,
-                registration_number,
-                color,
-                vehicle_type
-              )
-            )
-          `)
+          .select('*')
           .eq('id', rideId)
           .maybeSingle();
 
