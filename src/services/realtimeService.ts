@@ -7,10 +7,13 @@ class RealtimeService {
   // Subscribe to ride status updates
   subscribeToRide(rideId: string, callback: (ride: any) => void) {
     const channelName = `ride_${rideId}`;
-    
+
     if (this.channels.has(channelName)) {
+      console.log(`🔄 [REALTIME] Unsubscribing from existing channel: ${channelName}`);
       this.channels.get(channelName)?.unsubscribe();
     }
+
+    console.log(`📡 [REALTIME] Setting up subscription for ride: ${rideId}`);
 
     const channel = supabase
       .channel(channelName)
@@ -20,9 +23,14 @@ class RealtimeService {
         table: 'rides',
         filter: `id=eq.${rideId}`,
       }, (payload) => {
+        console.log(`🔔 [REALTIME] *** RIDE UPDATE CALLBACK FIRED ***`);
+        console.log(`🔔 [REALTIME] Ride ID: ${rideId}`);
+        console.log(`🔔 [REALTIME] Payload:`, payload);
         callback(payload.new);
       })
-      .subscribe();
+      .subscribe((status) => {
+        console.log(`📡 [REALTIME] Ride subscription status for ${rideId}:`, status);
+      });
 
     this.channels.set(channelName, channel);
     return channel;
