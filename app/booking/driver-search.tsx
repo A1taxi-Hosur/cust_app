@@ -378,27 +378,24 @@ export default function DriverSearchScreen() {
           return;
         }
 
-        // Check auth state before querying
-        const { data: { user: currentUser } } = await supabase.auth.getUser();
-        console.log('🚨 [DEBUG] Current auth user:', currentUser?.id, currentUser?.email);
+        // Use edge function to fetch ride status (bypasses RLS/auth issues)
+        const apiUrl = `${supabaseUrl}/functions/v1/get-ride-status?rideId=${rideId}`;
+        const response = await fetch(apiUrl, {
+          headers: {
+            'Authorization': `Bearer ${supabaseKey}`,
+            'Content-Type': 'application/json',
+          },
+        });
 
-        // First try simple query to test auth
-        const { data: rideData, error } = await supabase
-          .from('rides')
-          .select('*')
-          .eq('id', rideId)
-          .maybeSingle();
+        if (!response.ok) {
+          console.error('🚨 [DEBUG] Ride polling fetch error:', response.status, response.statusText);
+          return;
+        }
+
+        const { data: rideData, error } = await response.json();
 
         if (error) {
-          console.error('🚨 [DEBUG] Ride polling error:', error);
-          console.error('🚨 [DEBUG] Error code:', error.code, 'message:', error.message);
-
-          // If it's a network error, don't spam the console
-          if (error.message?.includes('Failed to fetch') || error.message?.includes('fetch')) {
-            console.warn('⚠️ [DRIVER_SEARCH] Network error during ride polling, will retry...');
-          } else {
-            console.error('❌ [DRIVER_SEARCH] Polling error:', error);
-          }
+          console.error('🚨 [DEBUG] Ride polling error from edge function:', error);
           return;
         }
 
