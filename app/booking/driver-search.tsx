@@ -506,9 +506,6 @@ export default function DriverSearchScreen() {
           clearInterval(intervalId);
           setPollingIntervalId(null);
 
-          // Force state update first to trigger re-render
-          setSearchStatus('found');
-
           // Fetch driver details and trigger navigation
           await fetchAssignedDriverDetails(bookingData.assigned_driver_id, bookingData);
         }
@@ -1085,7 +1082,7 @@ export default function DriverSearchScreen() {
           </View>
 
           {/* Cancel Button */}
-          {(searchStatus === 'searching' || searchStatus === 'timeout') && (
+          {(searchStatus === 'searching' || searchStatus === 'timeout' || searchStatus === 'found') && (
             <TouchableOpacity
               style={styles.cancelButton}
               onPress={() => {
