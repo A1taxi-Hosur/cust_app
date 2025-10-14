@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { View, Text, StyleSheet, SafeAreaView, ActivityIndicator, ScrollView, TouchableOpacity, Alert, RefreshControl } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
-import { MapPin, Navigation, Phone, User, Car, Star, Clock, ArrowLeft } from 'lucide-react-native';
+import { MapPin, Navigation, Phone, User, Car, Star, Clock, ArrowLeft, RefreshCw } from 'lucide-react-native';
 import { useAuth } from '../../src/contexts/AuthContext';
 import { rideService } from '../../src/services/rideService';
 import { useRideTracking } from '../../src/hooks/useRideTracking';
@@ -893,6 +893,18 @@ export default function RidesScreen() {
       >
         <View style={styles.header}>
           <Text style={styles.title}>My Rides</Text>
+          <TouchableOpacity
+            style={styles.refreshButton}
+            onPress={onRefresh}
+            disabled={refreshing}
+            activeOpacity={0.7}
+          >
+            {refreshing ? (
+              <ActivityIndicator size="small" color="#2563EB" />
+            ) : (
+              <RefreshCw size={20} color="#2563EB" />
+            )}
+          </TouchableOpacity>
         </View>
 
         <ScrollView
@@ -971,11 +983,27 @@ const styles = StyleSheet.create({
     paddingHorizontal: 20,
     paddingTop: 20,
     paddingBottom: 30,
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
   },
   title: {
     fontSize: 28,
     fontWeight: 'bold',
     color: '#1F2937',
+  },
+  refreshButton: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    backgroundColor: '#FFFFFF',
+    justifyContent: 'center',
+    alignItems: 'center',
+    elevation: 2,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
   },
   rideCard: {
     backgroundColor: '#FFFFFF',
