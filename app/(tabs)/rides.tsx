@@ -206,15 +206,8 @@ export default function RidesScreen() {
             return;
           }
 
-          // For important status changes, refresh full data to get driver details
-          const importantStatuses = ['assigned', 'driver_arrived', 'picked_up', 'in_progress'];
-          if (importantStatuses.includes(updatedBooking.status)) {
-            console.log('🔔 [RIDES] Important status change detected, refreshing full data');
-            setTimeout(() => fetchActiveRides(), 500);
-            return;
-          }
-
-          // For other updates, just update the status fields
+          // ALWAYS update OTP and status fields immediately in state
+          console.log('🔔 [RIDES] Updating booking in state with new fields (including OTP)');
           setActiveRides(prev => prev.map(r =>
             r.id === updatedBooking.id
               ? {
@@ -226,6 +219,13 @@ export default function RidesScreen() {
                 }
               : r
           ));
+
+          // For important status changes that need driver details, refresh AFTER updating state
+          const importantStatuses = ['assigned', 'driver_arrived', 'picked_up', 'in_progress'];
+          if (importantStatuses.includes(updatedBooking.status)) {
+            console.log('🔔 [RIDES] Important status change detected, will refresh for driver details');
+            setTimeout(() => fetchActiveRides(), 500);
+          }
         });
         subscriptions.push(statusSub);
       } else if (ride.id) {
@@ -245,16 +245,8 @@ export default function RidesScreen() {
             return;
           }
 
-          // For important status changes, refresh full ride data to get driver details
-          const importantStatuses = ['accepted', 'driver_arrived', 'picked_up', 'in_progress'];
-          if (importantStatuses.includes(updatedRide.status)) {
-            console.log('🔔 [RIDES] ⚡ Important status change detected, refreshing full data');
-            setTimeout(() => fetchActiveRides(), 500);
-            return;
-          }
-
-          // For other updates, just update the status fields
-          console.log('🔔 [RIDES] Updating ride in state with new fields');
+          // ALWAYS update OTP fields immediately in state
+          console.log('🔔 [RIDES] Updating ride in state with new fields (including OTP)');
           setActiveRides(prev => {
             const updated = prev.map(r =>
               r.id === updatedRide.id
@@ -270,6 +262,13 @@ export default function RidesScreen() {
             console.log('🔔 [RIDES] State updated, new activeRides count:', updated.length);
             return updated;
           });
+
+          // For important status changes that need driver details, refresh AFTER updating state
+          const importantStatuses = ['accepted', 'driver_arrived', 'picked_up', 'in_progress'];
+          if (importantStatuses.includes(updatedRide.status)) {
+            console.log('🔔 [RIDES] ⚡ Important status change detected, will refresh for driver details');
+            setTimeout(() => fetchActiveRides(), 500);
+          }
         });
         subscriptions.push(statusSub);
       }
