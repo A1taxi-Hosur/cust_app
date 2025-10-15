@@ -300,10 +300,10 @@ async function handleRideCompletion(req: Request, supabase: any) {
     if (notificationError) {
       console.error('❌ Error creating completion notification:', notificationError);
       return new Response(
-        JSON.stringify({ 
-          success: false, 
+        JSON.stringify({
+          success: false,
           error: 'Failed to create notification',
-          notificationError 
+          notificationError
         }),
         {
           status: 500,
@@ -316,6 +316,54 @@ async function handleRideCompletion(req: Request, supabase: any) {
     }
 
     console.log('✅ Ride completion notification created successfully for customer:', ride.customer_id);
+
+    // Insert fare breakdown into trip_completion table if provided
+    if (fareBreakdown) {
+      console.log('💰 Inserting fare breakdown into trip_completion table');
+
+      const tripCompletionData = {
+        ride_id: rideId || null,
+        booking_id: bookingId || null,
+        booking_type: ride.booking_type || 'regular',
+        base_fare: fareBreakdown.base_fare || 0,
+        per_km_charges: fareBreakdown.distance_fare || fareBreakdown.per_km_charges || 0,
+        per_min_charges: fareBreakdown.time_fare || fareBreakdown.per_min_charges || 0,
+        platform_fee: fareBreakdown.platform_fee || 0,
+        gst_charges: fareBreakdown.gst_charges || 0,
+        gst_platform_fee: fareBreakdown.gst_platform_fee || 0,
+        driver_allowance: fareBreakdown.driver_allowance || 0,
+        extra_km_charges: fareBreakdown.extra_km_fare || fareBreakdown.extra_km_charges || 0,
+        extra_time_charges: fareBreakdown.extra_time_fare || fareBreakdown.extra_time_charges || 0,
+        airport_fee: fareBreakdown.airport_fee || 0,
+        night_charges: fareBreakdown.night_charges || 0,
+        toll_charges: fareBreakdown.toll_charges || 0,
+        parking_charges: fareBreakdown.parking_charges || 0,
+        waiting_charges: fareBreakdown.waiting_charges || 0,
+        surge_charges: fareBreakdown.surge_fare || fareBreakdown.surge_charges || 0,
+        discount_amount: fareBreakdown.discount_amount || 0,
+        total_fare: fare_amount,
+        distance_km: distance_km,
+        duration_minutes: duration_minutes,
+        rental_hours: fareBreakdown.days || fareBreakdown.rental_hours || ride.rental_hours || null,
+        per_km_rate: fareBreakdown.per_km_rate || null,
+        per_min_rate: fareBreakdown.per_min_rate || null,
+        extra_km_rate: fareBreakdown.extra_km_rate || null,
+        extra_min_rate: fareBreakdown.extra_min_rate || null,
+      };
+
+      const { error: tripCompletionError } = await supabase
+        .from('trip_completion')
+        .insert(tripCompletionData);
+
+      if (tripCompletionError) {
+        console.error('❌ Error inserting trip_completion:', tripCompletionError);
+        // Don't fail the entire request if this fails
+      } else {
+        console.log('✅ Fare breakdown inserted into trip_completion table');
+      }
+    } else {
+      console.log('⚠️ No fare breakdown provided, skipping trip_completion insertion');
+    }
 
     return new Response(
       JSON.stringify({ 
