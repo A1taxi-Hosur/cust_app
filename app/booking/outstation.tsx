@@ -52,6 +52,7 @@ export default function OutstationBookingScreen() {
   const [configsLoading, setConfigsLoading] = useState(true);
   const [outstationConfigs, setOutstationConfigs] = useState<any[]>([]);
   const [calculatedFares, setCalculatedFares] = useState<{ [key: string]: number }>({});
+  const [calculationMethods, setCalculationMethods] = useState<{ [key: string]: 'slab' | 'per_km' }>({});
   const [routeInfo, setRouteInfo] = useState<{ distance: number; duration: number } | null>(null);
   const [numberOfDays, setNumberOfDays] = useState(1);
   const [fareDisplayKey, setFareDisplayKey] = useState(0); // Force UI refresh
@@ -243,6 +244,7 @@ export default function OutstationBookingScreen() {
   const calculateAllOutstationFares = async () => {
     if (!pickupCoords || !destinationCoords) {
       setCalculatedFares({});
+      setCalculationMethods({});
       setRouteInfo(null);
       return;
     }
@@ -300,7 +302,8 @@ export default function OutstationBookingScreen() {
       });
       
       const fares: { [key: string]: number } = {};
-      
+      const methods: { [key: string]: 'slab' | 'per_km' } = {};
+
       // Calculate fares for each vehicle type using the new logic
       for (const config of allConfigs) {
         console.log(`💰 [OUTSTATION-CALC] ===== CALCULATING FOR ${config.vehicle_type.toUpperCase()} =====`);
@@ -317,10 +320,13 @@ export default function OutstationBookingScreen() {
           if (fareBreakdown) {
             const finalFare = fareBreakdown.totalFare;
             fares[config.vehicle_type] = finalFare;
-            
+
+            // Store calculation method for this vehicle type
+            methods[config.vehicle_type] = (fareBreakdown as any).calculationMethod || 'per_km';
+
             console.log(`💰 [OUTSTATION-CALC] ${config.vehicle_type} calculation completed:`, {
               final_fare: `₹${finalFare}`,
-              calculation_method: (fareBreakdown as any).calculationMethod || 'unknown',
+              calculation_method: methods[config.vehicle_type],
               distance: fareBreakdown.distance + 'km',
               trip_type: isRoundTrip ? 'Round Trip' : 'Single Day',
               days: currentNumberOfDays,
@@ -331,14 +337,12 @@ export default function OutstationBookingScreen() {
                 totalFare: fareBreakdown.totalFare
               }
             });
-            
-            // Set route info from the first successful calculation
-            if (!routeInfo) {
-              setRouteInfo({ 
-                distance: fareBreakdown.distance, 
-                duration: fareBreakdown.duration 
-              });
-            }
+
+            // Always update route info with latest calculation (not just first time)
+            setRouteInfo({
+              distance: fareBreakdown.distance,
+              duration: fareBreakdown.duration
+            });
           } else {
             console.error(`❌ [OUTSTATION-CALC] Failed to calculate fare for ${config.vehicle_type}`);
             // Use fallback calculation
@@ -355,10 +359,12 @@ export default function OutstationBookingScreen() {
       
       console.log(`📊 [OUTSTATION-CALC] ===== ALL CALCULATED FARES =====`);
       console.log(`📊 [OUTSTATION-CALC] Final fares for state:`, fares);
-      console.log(`📊 [OUTSTATION-CALC] Fares breakdown:`, Object.entries(fares).map(([type, fare]) => `${type}: ₹${fare}`));
+      console.log(`📊 [OUTSTATION-CALC] Calculation methods:`, methods);
+      console.log(`📊 [OUTSTATION-CALC] Fares breakdown:`, Object.entries(fares).map(([type, fare]) => `${type}: ₹${fare} (${methods[type]})`));
       console.log(`📊 [OUTSTATION-CALC] Used new slab/per-km logic with days:`, currentNumberOfDays);
-      
+
       setCalculatedFares(fares);
+      setCalculationMethods(methods);
       setFareDisplayKey(prev => prev + 1); // Force UI refresh
       console.log(`✅ [OUTSTATION-CALC] Fares updated in state for ${Object.keys(fares).length} vehicle types`);
       
@@ -701,9 +707,8 @@ export default function OutstationBookingScreen() {
                   </Text>
                 )}
                 <Text style={styles.fareNote}>
-                  {routeInfo && routeInfo.distance > 0 && ` • ${Math.round(routeInfo.distance)}km`}
-                  {` • Total distance traveled`}
-                  {` • ${isRoundTrip ? 'Per-km model' : 'Slab model (no driver allowance < 300km)'}`}
+                  {routeInfo && routeInfo.distance > 0 && `${Math.round(routeInfo.distance)}km • Total distance traveled • `}
+                  {calculationMethods[selectedVehicle] === 'slab' ? 'Slab pricing' : 'Per-km model'}
                 </Text>
               </View>
             )}

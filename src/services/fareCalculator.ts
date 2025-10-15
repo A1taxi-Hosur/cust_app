@@ -933,7 +933,7 @@ class FareCalculator {
         platformFee: 0,
         deadheadCharge: 0,
         totalFare: Math.round(totalFare),
-        distance: Math.round(oneWayDistance * 100) / 100,
+        distance: Math.round(totalKmTravelled * 100) / 100, // Total distance traveled, not one-way
         duration: Math.round(routeInfo.duration),
         deadheadDistance: 0,
         calculationMethod
