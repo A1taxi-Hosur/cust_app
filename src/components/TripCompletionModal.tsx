@@ -31,14 +31,18 @@ export default function TripCompletionModal() {
   const [rating, setRating] = useState(0);
   const [submittingRating, setSubmittingRating] = useState(false);
   const [driverAppFareBreakdown, setDriverAppFareBreakdown] = useState<any>(null);
+  const [fareBreakdown, setFareBreakdown] = useState<any>(null);
+  const [loadingFareBreakdown, setLoadingFareBreakdown] = useState(false);
   const [processedNotificationIds, setProcessedNotificationIds] = useState<Set<string>>(() => {
     // Load processed IDs from localStorage to persist across re-renders
     try {
-      const stored = localStorage.getItem('processedTripCompletionNotifications');
-      if (stored) {
-        const ids = JSON.parse(stored);
-        console.log('🏁 [MODAL] Loaded processed notification IDs from storage:', ids);
-        return new Set(ids);
+      if (typeof window !== 'undefined' && window.localStorage) {
+        const stored = localStorage.getItem('processedTripCompletionNotifications');
+        if (stored) {
+          const ids = JSON.parse(stored);
+          console.log('🏁 [MODAL] Loaded processed notification IDs from storage:', ids);
+          return new Set(ids);
+        }
       }
     } catch (error) {
       console.error('Error loading processed notification IDs:', error);
@@ -52,7 +56,9 @@ export default function TripCompletionModal() {
     setProcessedNotificationIds(prev => {
       const newSet = new Set([...prev, notificationId]);
       try {
-        localStorage.setItem('processedTripCompletionNotifications', JSON.stringify(Array.from(newSet)));
+        if (typeof window !== 'undefined' && window.localStorage) {
+          localStorage.setItem('processedTripCompletionNotifications', JSON.stringify(Array.from(newSet)));
+        }
       } catch (error) {
         console.error('Error saving processed notification IDs:', error);
       }
@@ -105,9 +111,8 @@ export default function TripCompletionModal() {
       
       const notProcessed = !processedNotificationIds.has(n.id);
       const hasRideData = !!(n.data?.ride_id || n.data?.booking_id || n.data?.rideId || n.data?.bookingId);
-      const notTestData = !n.data?.rideId?.startsWith('test-');
-      const notTestData2 = !n.data?.ride_id?.startsWith('test-');
-      
+      const notTestData = !(n.data?.rideId?.startsWith('test-') || n.data?.ride_id?.startsWith('test-'));
+
       if (isRightType) {
         console.log(`🏁 [MODAL] DETAILED CHECK for notification ${n.id}:`, {
           id: n.id,
@@ -117,7 +122,7 @@ export default function TripCompletionModal() {
           message: n.message,
           created_at: n.created_at,
           age_minutes: Math.round(notificationAge / 1000 / 60),
-          
+
           // Filtering criteria
         isRightType,
         isUnread,
