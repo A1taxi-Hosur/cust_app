@@ -69,37 +69,84 @@ export default function TripCompletionNotification() {
 
     setLoading(true);
     try {
-      // Try to fetch from trip_completions table first (preferred - has detailed breakdown)
-      const { data, error } = await supabase
-        .from('trip_completions')
-        .select('*')
-        .eq('ride_id', rideOrBookingId)
-        .order('created_at', { ascending: false })
-        .limit(1)
+      console.log('🔍 [TRIP_NOTIFICATION] Fetching fare breakdown for ID:', rideOrBookingId);
+
+      // First, determine the booking type from scheduled_bookings
+      const { data: bookingData } = await supabase
+        .from('scheduled_bookings')
+        .select('booking_type')
+        .eq('id', rideOrBookingId)
         .maybeSingle();
 
-      if (data) {
-        console.log('✅ [TRIP_NOTIFICATION] Fare breakdown fetched from trip_completions:', data);
-        setFareBreakdown(data);
+      const bookingType = notification?.data?.bookingType || notification?.data?.booking_type || bookingData?.booking_type || 'regular';
+      console.log('📋 [TRIP_NOTIFICATION] Booking type:', bookingType);
+
+      let fareData = null;
+
+      // Fetch from the appropriate trip completion table based on booking type
+      if (bookingType === 'rental') {
+        console.log('🔍 [TRIP_NOTIFICATION] Fetching from rental_trip_completions');
+        const { data } = await supabase
+          .from('rental_trip_completions')
+          .select('*')
+          .eq('scheduled_booking_id', rideOrBookingId)
+          .order('created_at', { ascending: false })
+          .limit(1)
+          .maybeSingle();
+        fareData = data;
+      } else if (bookingType === 'outstation') {
+        console.log('🔍 [TRIP_NOTIFICATION] Fetching from outstation_trip_completions');
+        const { data } = await supabase
+          .from('outstation_trip_completions')
+          .select('*')
+          .eq('scheduled_booking_id', rideOrBookingId)
+          .order('created_at', { ascending: false })
+          .limit(1)
+          .maybeSingle();
+        fareData = data;
+      } else if (bookingType === 'airport') {
+        console.log('🔍 [TRIP_NOTIFICATION] Fetching from airport_trip_completions');
+        const { data } = await supabase
+          .from('airport_trip_completions')
+          .select('*')
+          .eq('scheduled_booking_id', rideOrBookingId)
+          .order('created_at', { ascending: false })
+          .limit(1)
+          .maybeSingle();
+        fareData = data;
       } else {
-        // If no trip_completions data, try to get basic info from scheduled_bookings
-        console.log('⚠️ [TRIP_NOTIFICATION] No trip_completions data, fetching from scheduled_bookings');
-        const { data: bookingData, error: bookingError } = await supabase
+        // Regular ride - try trip_completions table
+        console.log('🔍 [TRIP_NOTIFICATION] Fetching from trip_completions');
+        const { data } = await supabase
+          .from('trip_completions')
+          .select('*')
+          .eq('ride_id', rideOrBookingId)
+          .order('created_at', { ascending: false })
+          .limit(1)
+          .maybeSingle();
+        fareData = data;
+      }
+
+      if (fareData) {
+        console.log('✅ [TRIP_NOTIFICATION] Fare breakdown fetched:', fareData);
+        setFareBreakdown(fareData);
+      } else {
+        console.log('⚠️ [TRIP_NOTIFICATION] No fare breakdown found, fetching booking estimate');
+        // Fallback to scheduled_bookings for basic info
+        const { data: bookingInfo } = await supabase
           .from('scheduled_bookings')
           .select('*')
           .eq('id', rideOrBookingId)
           .maybeSingle();
 
-        if (bookingData) {
-          console.log('✅ [TRIP_NOTIFICATION] Booking data fetched:', bookingData);
-          // Create a basic fare breakdown from booking data
+        if (bookingInfo) {
+          console.log('✅ [TRIP_NOTIFICATION] Using booking estimate as fallback');
           setFareBreakdown({
-            booking_type: bookingData.booking_type,
-            base_fare: bookingData.estimated_fare || 0,
-            total_fare: bookingData.estimated_fare || 0,
+            booking_type: bookingInfo.booking_type,
+            base_fare: bookingInfo.estimated_fare || 0,
+            total_fare: bookingInfo.estimated_fare || 0,
             actual_distance_km: 0,
             actual_duration_minutes: 0,
-            // No detailed breakdown available
           });
         } else {
           console.log('❌ [TRIP_NOTIFICATION] No data found for ID:', rideOrBookingId);
@@ -206,11 +253,35 @@ export default function TripCompletionNotification() {
                 </View>
               )}
 
+              {/* Hourly Charges (rental only) */}
+              {fareBreakdown.hourly_charges > 0 && (
+                <View style={styles.fareRow}>
+                  <Text style={styles.fareLabel}>
+                    Hourly Charges
+                    {fareBreakdown.rental_hours > 0 &&
+                      `\n${fareBreakdown.rental_hours}hrs package`}
+                  </Text>
+                  <Text style={styles.fareValue}>₹{fareBreakdown.hourly_charges.toFixed(2)}</Text>
+                </View>
+              )}
+
+              {/* Per Day Charges (outstation only) */}
+              {fareBreakdown.per_day_charges > 0 && (
+                <View style={styles.fareRow}>
+                  <Text style={styles.fareLabel}>
+                    Per Day Charges
+                    {fareBreakdown.actual_days > 0 &&
+                      `\n${fareBreakdown.actual_days} day${fareBreakdown.actual_days > 1 ? 's' : ''}`}
+                  </Text>
+                  <Text style={styles.fareValue}>₹{fareBreakdown.per_day_charges.toFixed(2)}</Text>
+                </View>
+              )}
+
               {/* Per KM Charges (distance_fare in trip_completions) */}
               {fareBreakdown.distance_fare > 0 && (
                 <View style={styles.fareRow}>
                   <Text style={styles.fareLabel}>
-                    Per KM Charges
+                    {fareBreakdown.booking_type === 'rental' ? 'Distance Charges' : 'Per KM Charges'}
                     {fareBreakdown.actual_distance_km > 0 &&
                       `\n${fareBreakdown.actual_distance_km.toFixed(1)}km`}
                   </Text>
@@ -272,7 +343,15 @@ export default function TripCompletionNotification() {
                 </View>
               )}
 
-              {/* Extra Time Charges */}
+              {/* Extra Hour Charges (rental only) */}
+              {fareBreakdown.extra_hour_charges > 0 && (
+                <View style={styles.fareRow}>
+                  <Text style={styles.fareLabel}>Extra Hour Charges</Text>
+                  <Text style={styles.fareValue}>₹{fareBreakdown.extra_hour_charges.toFixed(2)}</Text>
+                </View>
+              )}
+
+              {/* Extra Time Charges (regular rides) */}
               {fareBreakdown.extra_time_charges > 0 && (
                 <View style={styles.fareRow}>
                   <Text style={styles.fareLabel}>Extra Time Charges</Text>
@@ -280,7 +359,15 @@ export default function TripCompletionNotification() {
                 </View>
               )}
 
-              {/* Airport Fee */}
+              {/* Airport Surcharge (airport only) */}
+              {fareBreakdown.airport_surcharge > 0 && (
+                <View style={styles.fareRow}>
+                  <Text style={styles.fareLabel}>Airport Surcharge</Text>
+                  <Text style={styles.fareValue}>₹{fareBreakdown.airport_surcharge.toFixed(2)}</Text>
+                </View>
+              )}
+
+              {/* Airport Fee (regular rides) */}
               {fareBreakdown.airport_fee > 0 && (
                 <View style={styles.fareRow}>
                   <Text style={styles.fareLabel}>Airport Fee</Text>
@@ -331,14 +418,26 @@ export default function TripCompletionNotification() {
               )}
 
               {/* Trip Summary */}
-              {fareBreakdown.booking_type === 'outstation' && fareBreakdown.rental_hours && (
+              {fareBreakdown.actual_distance_km > 0 && (
                 <View style={styles.tripSummary}>
                   <Text style={styles.tripSummaryText}>
-                    Trip Summary: {fareBreakdown.actual_distance_km.toFixed(1)}km in {Math.round(fareBreakdown.actual_duration_minutes)}min
+                    Trip Summary: {fareBreakdown.actual_distance_km.toFixed(1)}km in {Math.round(fareBreakdown.actual_duration_minutes || 0)}min
                   </Text>
-                  <Text style={styles.tripSummaryText}>
-                    {fareBreakdown.rental_hours} day trip
-                  </Text>
+                  {fareBreakdown.booking_type === 'rental' && fareBreakdown.actual_hours_used > 0 && (
+                    <Text style={styles.tripSummaryText}>
+                      Used {fareBreakdown.actual_hours_used.toFixed(1)} hours of {fareBreakdown.rental_hours}hr package
+                    </Text>
+                  )}
+                  {fareBreakdown.booking_type === 'outstation' && fareBreakdown.actual_days > 0 && (
+                    <Text style={styles.tripSummaryText}>
+                      {fareBreakdown.actual_days} day{fareBreakdown.actual_days > 1 ? 's' : ''} trip
+                    </Text>
+                  )}
+                  {fareBreakdown.booking_type === 'airport' && (
+                    <Text style={styles.tripSummaryText}>
+                      Airport transfer completed
+                    </Text>
+                  )}
                   <Text style={[styles.tripSummaryText, { fontSize: 11, color: '#9CA3AF' }]}>
                     GPS tracked actual distance
                   </Text>
