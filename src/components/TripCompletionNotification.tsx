@@ -58,9 +58,11 @@ export default function TripCompletionNotification() {
     setLoading(true);
     try {
       const { data, error } = await supabase
-        .from('trip_completion')
+        .from('trip_completions')
         .select('*')
         .eq('ride_id', rideId)
+        .order('created_at', { ascending: false })
+        .limit(1)
         .maybeSingle();
 
       if (error) {
@@ -151,15 +153,15 @@ export default function TripCompletionNotification() {
                 </View>
               )}
 
-              {/* Per KM Charges */}
-              {fareBreakdown.per_km_charges > 0 && (
+              {/* Per KM Charges (distance_fare in trip_completions) */}
+              {fareBreakdown.distance_fare > 0 && (
                 <View style={styles.fareRow}>
                   <Text style={styles.fareLabel}>
                     Per KM Charges
-                    {fareBreakdown.distance_km > 0 && fareBreakdown.per_km_rate > 0 &&
-                      `\n${fareBreakdown.distance_km.toFixed(1)}km × ₹${fareBreakdown.per_km_rate.toFixed(0)}/km`}
+                    {fareBreakdown.actual_distance_km > 0 &&
+                      `\n${fareBreakdown.actual_distance_km.toFixed(1)}km`}
                   </Text>
-                  <Text style={styles.fareValue}>₹{fareBreakdown.per_km_charges.toFixed(2)}</Text>
+                  <Text style={styles.fareValue}>₹{fareBreakdown.distance_fare.toFixed(2)}</Text>
                 </View>
               )}
 
@@ -172,18 +174,18 @@ export default function TripCompletionNotification() {
               )}
 
               {/* GST on Charges */}
-              {fareBreakdown.gst_charges > 0 && (
+              {fareBreakdown.gst_on_charges > 0 && (
                 <View style={styles.fareRow}>
                   <Text style={styles.fareLabel}>GST on Charges (5%)</Text>
-                  <Text style={styles.fareValue}>₹{fareBreakdown.gst_charges.toFixed(2)}</Text>
+                  <Text style={styles.fareValue}>₹{fareBreakdown.gst_on_charges.toFixed(2)}</Text>
                 </View>
               )}
 
               {/* GST on Platform Fee */}
-              {fareBreakdown.gst_platform_fee > 0 && (
+              {fareBreakdown.gst_on_platform_fee > 0 && (
                 <View style={styles.fareRow}>
                   <Text style={styles.fareLabel}>GST on Platform Fee (18%)</Text>
-                  <Text style={styles.fareValue}>₹{fareBreakdown.gst_platform_fee.toFixed(2)}</Text>
+                  <Text style={styles.fareValue}>₹{fareBreakdown.gst_on_platform_fee.toFixed(2)}</Text>
                 </View>
               )}
 
@@ -197,15 +199,15 @@ export default function TripCompletionNotification() {
                 </View>
               )}
 
-              {/* Per Min Charges */}
-              {fareBreakdown.per_min_charges > 0 && (
+              {/* Time Charges (time_fare in trip_completions) */}
+              {fareBreakdown.time_fare > 0 && (
                 <View style={styles.fareRow}>
                   <Text style={styles.fareLabel}>
                     Time Charges
-                    {fareBreakdown.duration_minutes > 0 && fareBreakdown.per_min_rate > 0 &&
-                      `\n${Math.round(fareBreakdown.duration_minutes)}min × ₹${fareBreakdown.per_min_rate.toFixed(2)}/min`}
+                    {fareBreakdown.actual_duration_minutes > 0 &&
+                      `\n${Math.round(fareBreakdown.actual_duration_minutes)}min`}
                   </Text>
-                  <Text style={styles.fareValue}>₹{fareBreakdown.per_min_charges.toFixed(2)}</Text>
+                  <Text style={styles.fareValue}>₹{fareBreakdown.time_fare.toFixed(2)}</Text>
                 </View>
               )}
 
@@ -279,7 +281,7 @@ export default function TripCompletionNotification() {
               {fareBreakdown.booking_type === 'outstation' && fareBreakdown.rental_hours && (
                 <View style={styles.tripSummary}>
                   <Text style={styles.tripSummaryText}>
-                    Trip Summary: {fareBreakdown.distance_km.toFixed(1)}km in {Math.round(fareBreakdown.duration_minutes)}min
+                    Trip Summary: {fareBreakdown.actual_distance_km.toFixed(1)}km in {Math.round(fareBreakdown.actual_duration_minutes)}min
                   </Text>
                   <Text style={styles.tripSummaryText}>
                     {fareBreakdown.rental_hours} day trip
