@@ -431,8 +431,24 @@ export default function OutstationBookingScreen() {
     }
     console.log('🎯 [OUTSTATION] Starting booking process...');
     setLoading(true);
-    
+
     try {
+      // Verify session is active
+      const { data: { session }, error: sessionError } = await supabase.auth.getSession();
+
+      if (sessionError || !session) {
+        console.error('🎯 [OUTSTATION] Session error:', sessionError);
+        setLoading(false);
+        Alert.alert('Authentication Error', 'Your session has expired. Please log in again.');
+        return;
+      }
+
+      console.log('🎯 [OUTSTATION] Session verified:', {
+        userId: session.user.id,
+        email: session.user.email,
+        expiresAt: new Date(session.expires_at! * 1000).toISOString()
+      });
+
       console.log('🎯 [OUTSTATION] Inserting booking into database...');
       const { data, error } = await supabase
         .from('scheduled_bookings')
