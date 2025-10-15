@@ -678,6 +678,17 @@ class FareCalculator {
       // Per-km model (with driver allowance) for trips > 150km one-way OR multi-day trips
       const shouldUseSlabPricing = oneWayDistance <= 150 && isSameDay && outstationPackageConfig?.use_slab_system;
 
+      console.log('🔍 [OUTSTATION] Slab pricing decision logic:', {
+        oneWayDistance: oneWayDistance.toFixed(2) + 'km',
+        totalKmTravelled: totalKmTravelled.toFixed(2) + 'km',
+        distanceCheck: oneWayDistance <= 150,
+        isSameDay,
+        hasSlabConfig: !!outstationPackageConfig?.use_slab_system,
+        useSlabSystem: outstationPackageConfig?.use_slab_system,
+        shouldUseSlabPricing,
+        decision: shouldUseSlabPricing ? 'SLAB PRICING' : 'PER-KM PRICING'
+      });
+
       if (shouldUseSlabPricing) {
         console.log('✅ [OUTSTATION] Using SLAB MODEL (≤ 150km one-way AND same-day return)');
         calculationMethod = 'slab';
@@ -791,18 +802,41 @@ class FareCalculator {
             });
           }
         } else {
-          // SINGLE TRIP > 300km: per-km rate + driver allowance
-          totalFare = (totalKmTravelled * perKmRate) + (driverAllowancePerDay * numberOfDays);
-          driverAllowance = driverAllowancePerDay * numberOfDays;
+          // SINGLE TRIP > 300km total (> 150km one-way): per-km rate + driver allowance
+          if (totalKmTravelled > 300) {
+            totalFare = (totalKmTravelled * perKmRate) + (driverAllowancePerDay * numberOfDays);
+            driverAllowance = driverAllowancePerDay * numberOfDays;
 
-          console.log('💰 [OUTSTATION] Single trip > 300km (per-km + driver allowance):', {
-            formula: `(${totalKmTravelled.toFixed(2)}km × ₹${perKmRate}/km) + (₹${driverAllowancePerDay} × ${numberOfDays} day)`,
-            totalKmTravelled: totalKmTravelled.toFixed(2) + 'km',
-            perKmRate: '₹' + perKmRate,
-            distanceFare: '₹' + (totalKmTravelled * perKmRate),
-            driverAllowance: '₹' + driverAllowance,
-            totalFare: '₹' + totalFare
-          });
+            console.log('💰 [OUTSTATION] Single trip > 300km (per-km + driver allowance):', {
+              formula: `(${totalKmTravelled.toFixed(2)}km × ₹${perKmRate}/km) + (₹${driverAllowancePerDay} × ${numberOfDays} day)`,
+              totalKmTravelled: totalKmTravelled.toFixed(2) + 'km',
+              perKmRate: '₹' + perKmRate,
+              distanceFare: '₹' + (totalKmTravelled * perKmRate),
+              driverAllowance: '₹' + driverAllowance,
+              totalFare: '₹' + totalFare
+            });
+          } else {
+            // Single trip ≤ 300km total: Use per-km WITHOUT driver allowance
+            console.log('✅ [OUTSTATION] Single trip ≤ 300km (per-km only, NO driver allowance):', {
+              reason: 'Trips ≤ 300km do not qualify for driver allowance',
+              oneWayDistance: oneWayDistance.toFixed(2) + 'km',
+              totalKmTravelled: totalKmTravelled.toFixed(2) + 'km',
+              note: 'Slab pricing not available or not configured'
+            });
+
+            // Per-km rate WITHOUT driver allowance for trips ≤ 300km
+            totalFare = totalKmTravelled * perKmRate;
+            driverAllowance = 0;
+            calculationMethod = 'per_km';
+
+            console.log('💰 [OUTSTATION] Calculation (per-km only, no driver allowance):', {
+              formula: `${totalKmTravelled.toFixed(2)}km × ₹${perKmRate}/km = ₹${totalFare}`,
+              totalKmTravelled: totalKmTravelled.toFixed(2) + 'km',
+              perKmRate: '₹' + perKmRate,
+              driverAllowance: '₹0 (not added for trips ≤ 300km)',
+              totalFare: '₹' + totalFare
+            });
+          }
         }
       }
 
