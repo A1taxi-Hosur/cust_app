@@ -6,7 +6,7 @@ import { AuthProvider } from '../src/contexts/AuthContext';
 import AuthNavigator from '../src/components/AuthNavigator';
 import NotificationBanner from '../src/components/NotificationBanner';
 import RideNotificationListener from '../src/components/RideNotificationListener';
-import TripCompletionModal from '../src/components/TripCompletionModal';
+import TripCompletionNotification from '../src/components/TripCompletionNotification';
 
 export default function RootLayout() {
   useFrameworkReady();
@@ -16,7 +16,7 @@ export default function RootLayout() {
       <AuthNavigator>
         <RideNotificationListener />
         <NotificationBanner />
-        <TripCompletionModal />
+        <TripCompletionNotification />
         <Stack screenOptions={{ headerShown: false }}>
           <Stack.Screen name="(tabs)" />
           <Stack.Screen name="auth" />
