@@ -87,6 +87,8 @@ export default function VerifyOTPScreen() {
 
       const data = await response.json();
 
+      console.log('📦 Full response data:', JSON.stringify(data, null, 2));
+
       if (!response.ok) {
         Alert.alert('Error', data.error || 'Failed to verify OTP');
         setLoading(false);
@@ -96,11 +98,7 @@ export default function VerifyOTPScreen() {
       if (data.success && data.userId && data.session) {
         console.log('✅ OTP verified, user ID (UUID):', data.userId);
         console.log('✅ Customer ID (integer):', data.customerId);
-        console.log('✅ Session received:', {
-          hasAccessToken: !!data.session.access_token,
-          hasRefreshToken: !!data.session.refresh_token,
-          expiresAt: data.session.expires_at
-        });
+        console.log('✅ Session received:', JSON.stringify(data.session, null, 2));
 
         // Set the session directly in Supabase client
         console.log('🔐 Setting Supabase session...');

@@ -13,13 +13,13 @@ Deno.serve(async (req: Request) => {
   }
 
   try {
-    console.log('🔐 ===== VERIFY OTP STARTING =====');
+    console.log('\ud83d\udd10 ===== VERIFY OTP STARTING =====');
     const { phoneNumber, otp } = await req.json();
-    console.log('🔐 Phone Number:', phoneNumber);
-    console.log('🔐 OTP:', otp);
+    console.log('\ud83d\udd10 Phone Number:', phoneNumber);
+    console.log('\ud83d\udd10 OTP:', otp);
 
     if (!phoneNumber || !otp) {
-      console.log('❌ Missing phone number or OTP');
+      console.log('\u274c Missing phone number or OTP');
       return new Response(
         JSON.stringify({ error: 'Phone number and OTP are required' }),
         {
@@ -37,7 +37,7 @@ Deno.serve(async (req: Request) => {
 
     const { createClient } = await import('npm:@supabase/supabase-js@2.56.1');
     const supabase = createClient(supabaseUrl, supabaseKey);
-    console.log('🔐 Supabase client created');
+    console.log('\ud83d\udd10 Supabase client created');
 
     const { data: otpRecord, error: otpError } = await supabase
       .from('otp_verifications')
@@ -69,7 +69,7 @@ Deno.serve(async (req: Request) => {
       .update({ verified: true })
       .eq('id', otpRecord.id);
 
-    console.log('🔐 Checking for existing customer...');
+    console.log('\ud83d\udd10 Checking for existing customer...');
     const { data: existingCustomer } = await supabase
       .from('Customers')
       .select('*')
@@ -80,11 +80,11 @@ Deno.serve(async (req: Request) => {
     let userId: string | null = null;
 
     if (existingCustomer) {
-      console.log('✅ Found existing customer:', existingCustomer.id);
+      console.log('\u2705 Found existing customer:', existingCustomer.id);
       customerId = existingCustomer.id.toString();
       userId = existingCustomer.user_id;
 
-      console.log('🔐 Updating existing customer name...');
+      console.log('\ud83d\udd10 Updating existing customer name...');
       await supabase
         .from('Customers')
         .update({
@@ -93,7 +93,7 @@ Deno.serve(async (req: Request) => {
         })
         .eq('id', existingCustomer.id);
     } else {
-      console.log('🔐 Creating new customer...');
+      console.log('\ud83d\udd10 Creating new customer...');
       const { data: newCustomer, error: customerError } = await supabase
         .from('Customers')
         .insert({
@@ -104,8 +104,8 @@ Deno.serve(async (req: Request) => {
         .single();
 
       if (customerError || !newCustomer) {
-        console.error('❌ Error creating customer:', customerError);
-        console.error('❌ Customer error details:', JSON.stringify(customerError, null, 2));
+        console.error('\u274c Error creating customer:', customerError);
+        console.error('\u274c Customer error details:', JSON.stringify(customerError, null, 2));
         return new Response(
           JSON.stringify({ error: 'Failed to create customer account', details: customerError?.message }),
           {
@@ -118,13 +118,13 @@ Deno.serve(async (req: Request) => {
         );
       }
 
-      console.log('✅ Customer created:', newCustomer.id);
+      console.log('\u2705 Customer created:', newCustomer.id);
       customerId = newCustomer.id.toString();
       userId = newCustomer.user_id;
     }
 
-    console.log('🔐 Customer ID:', customerId);
-    console.log('🔐 Existing user_id:', userId);
+    console.log('\ud83d\udd10 Customer ID:', customerId);
+    console.log('\ud83d\udd10 Existing user_id:', userId);
 
     let authUser;
 
@@ -136,14 +136,14 @@ Deno.serve(async (req: Request) => {
     }
 
     if (!authUser) {
-      console.log('🔐 Creating new auth user...');
-      console.log('🔐 Phone:', phoneNumber);
-      console.log('🔐 Name:', otpRecord.name);
-      console.log('🔐 Customer ID:', customerId);
+      console.log('\ud83d\udd10 Creating new auth user...');
+      console.log('\ud83d\udd10 Phone:', phoneNumber);
+      console.log('\ud83d\udd10 Name:', otpRecord.name);
+      console.log('\ud83d\udd10 Customer ID:', customerId);
 
-      const dummyEmail = `${phoneNumber.replace(/\+/g, '').replace(/\s/g, '')}@phone.a1taxi.local`;
-      const defaultPassword = `A1Taxi${phoneNumber.replace(/\D/g, '')}!`;
-      console.log('🔐 Using dummy email:', dummyEmail);
+      const dummyEmail = `${phoneNumber.replace(/\\+/g, '').replace(/\\s/g, '')}@phone.a1taxi.local`;
+      const defaultPassword = `A1Taxi${phoneNumber.replace(/\\D/g, '')}!`;
+      console.log('\ud83d\udd10 Using dummy email:', dummyEmail);
 
       const { data: authData, error: authError } = await supabase.auth.admin.createUser({
         phone: phoneNumber,
@@ -160,10 +160,10 @@ Deno.serve(async (req: Request) => {
       });
 
       if (authError) {
-        console.error('❌ Auth error:', authError);
-        console.error('❌ Auth error code:', authError.code);
-        console.error('❌ Auth error message:', authError.message);
-        console.error('❌ Auth error details:', JSON.stringify(authError, null, 2));
+        console.error('\u274c Auth error:', authError);
+        console.error('\u274c Auth error code:', authError.code);
+        console.error('\u274c Auth error message:', authError.message);
+        console.error('\u274c Auth error details:', JSON.stringify(authError, null, 2));
         return new Response(
           JSON.stringify({ error: 'Authentication failed: ' + authError.message }),
           {
@@ -177,7 +177,7 @@ Deno.serve(async (req: Request) => {
       }
 
       if (!authData || !authData.user) {
-        console.error('❌ No auth data or user returned');
+        console.error('\u274c No auth data or user returned');
         return new Response(
           JSON.stringify({ error: 'Failed to create user session' }),
           {
@@ -191,25 +191,25 @@ Deno.serve(async (req: Request) => {
       }
 
       authUser = authData.user;
-      console.log('✅ Auth user created:', authUser.id);
+      console.log('\u2705 Auth user created:', authUser.id);
 
-      console.log('🔐 Updating customer with user_id...');
+      console.log('\ud83d\udd10 Updating customer with user_id...');
       const { error: updateError } = await supabase
         .from('Customers')
         .update({ user_id: authUser.id })
         .eq('id', customerId);
 
       if (updateError) {
-        console.error('❌ Error updating customer with user_id:', updateError);
+        console.error('\u274c Error updating customer with user_id:', updateError);
       } else {
-        console.log('✅ Customer updated with user_id');
+        console.log('\u2705 Customer updated with user_id');
       }
     }
 
-    console.log('✅ Customer and auth user setup complete');
-    console.log('🔐 Generating session for user:', authUser.id);
+    console.log('\u2705 Customer and auth user setup complete');
+    console.log('\ud83d\udd10 Generating session for user:', authUser.id);
 
-    // Generate a sign-in link which includes access and refresh tokens
+    // Generate a sign-in link to get the hashed token
     const { data: linkData, error: linkError } = await supabase.auth.admin.generateLink({
       type: 'magiclink',
       email: authUser.email!,
@@ -219,7 +219,7 @@ Deno.serve(async (req: Request) => {
     });
 
     if (linkError || !linkData) {
-      console.error('❌ Error generating session link:', linkError);
+      console.error('\u274c Error generating session link:', linkError);
       return new Response(
         JSON.stringify({ error: 'Failed to generate session' }),
         {
@@ -232,7 +232,29 @@ Deno.serve(async (req: Request) => {
       );
     }
 
-    console.log('✅ Session tokens generated successfully');
+    console.log('\u2705 Magic link generated, verifying OTP to get session...');
+
+    // Verify the OTP using the hashed token to get a proper session
+    const { data: sessionData, error: verifyError } = await supabase.auth.verifyOtp({
+      type: 'magiclink',
+      token_hash: linkData.properties.hashed_token
+    });
+
+    if (verifyError || !sessionData.session) {
+      console.error('\u274c Error verifying OTP for session:', verifyError);
+      return new Response(
+        JSON.stringify({ error: 'Failed to create session' }),
+        {
+          status: 500,
+          headers: {
+            'Content-Type': 'application/json',
+            ...corsHeaders,
+          },
+        }
+      );
+    }
+
+    console.log('\u2705 Session created successfully');
 
     return new Response(
       JSON.stringify({
@@ -240,12 +262,12 @@ Deno.serve(async (req: Request) => {
         customerId,
         userId: authUser.id,
         session: {
-          access_token: linkData.properties.access_token,
-          refresh_token: linkData.properties.refresh_token,
-          expires_in: linkData.properties.expires_in,
-          expires_at: linkData.properties.expires_at,
-          token_type: 'bearer',
-          user: linkData.user
+          access_token: sessionData.session.access_token,
+          refresh_token: sessionData.session.refresh_token,
+          expires_in: sessionData.session.expires_in,
+          expires_at: sessionData.session.expires_at,
+          token_type: sessionData.session.token_type,
+          user: sessionData.session.user
         },
         user: {
           id: authUser.id,
