@@ -27,9 +27,9 @@ export default function TripCompletionNotification() {
   const [shownNotifications, setShownNotifications] = useState<Set<string>>(new Set());
 
   useEffect(() => {
-    // Find unread trip_completed notifications
+    // Find unread trip_completed or booking_completed notifications
     const tripCompletedNotifications = notifications.filter(n =>
-      n.type === 'trip_completed' &&
+      (n.type === 'trip_completed' || n.type === 'booking_completed') &&
       n.status === 'unread' &&
       !shownNotifications.has(n.id)
     );
@@ -40,8 +40,11 @@ export default function TripCompletionNotification() {
       setNotification(latest);
       setShownNotifications(prev => new Set([...prev, latest.id]));
 
-      // Fetch fare breakdown
-      fetchFareBreakdown(latest.data?.ride_id || latest.data?.rideId);
+      // Fetch fare breakdown - try to get ride_id or booking_id
+      const rideId = latest.data?.ride_id || latest.data?.rideId || latest.data?.booking_id || latest.data?.bookingId;
+      if (rideId) {
+        fetchFareBreakdown(rideId);
+      }
 
       // Show notification with fade in animation
       setVisible(true);
@@ -61,27 +64,46 @@ export default function TripCompletionNotification() {
     }
   }, [notifications, visible]);
 
-  const fetchFareBreakdown = async (rideId: string) => {
-    if (!rideId) return;
+  const fetchFareBreakdown = async (rideOrBookingId: string) => {
+    if (!rideOrBookingId) return;
 
     setLoading(true);
     try {
+      // Try to fetch from trip_completions table first (preferred - has detailed breakdown)
       const { data, error } = await supabase
         .from('trip_completions')
         .select('*')
-        .eq('ride_id', rideId)
+        .eq('ride_id', rideOrBookingId)
         .order('created_at', { ascending: false })
         .limit(1)
         .maybeSingle();
 
-      if (error) {
-        console.error('Error fetching fare breakdown:', error);
-        return;
-      }
-
       if (data) {
-        console.log('✅ [TRIP_NOTIFICATION] Fare breakdown fetched:', data);
+        console.log('✅ [TRIP_NOTIFICATION] Fare breakdown fetched from trip_completions:', data);
         setFareBreakdown(data);
+      } else {
+        // If no trip_completions data, try to get basic info from scheduled_bookings
+        console.log('⚠️ [TRIP_NOTIFICATION] No trip_completions data, fetching from scheduled_bookings');
+        const { data: bookingData, error: bookingError } = await supabase
+          .from('scheduled_bookings')
+          .select('*')
+          .eq('id', rideOrBookingId)
+          .maybeSingle();
+
+        if (bookingData) {
+          console.log('✅ [TRIP_NOTIFICATION] Booking data fetched:', bookingData);
+          // Create a basic fare breakdown from booking data
+          setFareBreakdown({
+            booking_type: bookingData.booking_type,
+            base_fare: bookingData.estimated_fare || 0,
+            total_fare: bookingData.estimated_fare || 0,
+            actual_distance_km: 0,
+            actual_duration_minutes: 0,
+            // No detailed breakdown available
+          });
+        } else {
+          console.log('❌ [TRIP_NOTIFICATION] No data found for ID:', rideOrBookingId);
+        }
       }
     } catch (error) {
       console.error('Exception fetching fare breakdown:', error);
