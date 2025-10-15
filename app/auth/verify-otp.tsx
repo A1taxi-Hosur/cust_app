@@ -16,6 +16,7 @@ import { LinearGradient } from 'expo-linear-gradient';
 import { Car, ArrowLeft } from 'lucide-react-native';
 import { useAuth } from '../../src/contexts/AuthContext';
 import { useRouter, useLocalSearchParams } from 'expo-router';
+import { supabase } from '../../src/utils/supabase';
 
 // Utility function to refresh the app
 const refreshApp = () => {
@@ -95,6 +96,35 @@ export default function VerifyOTPScreen() {
       if (data.success && data.userId) {
         console.log('✅ OTP verified, user ID (UUID):', data.userId);
         console.log('✅ Customer ID (integer):', data.customerId);
+        console.log('✅ Email:', data.email);
+        console.log('✅ Password:', data.password);
+
+        // Sign in with Supabase to create a proper session
+        console.log('🔐 Signing in with Supabase...');
+        const { data: authData, error: signInError } = await supabase.auth.signInWithPassword({
+          email: data.email,
+          password: data.password,
+        });
+
+        if (signInError) {
+          console.error('❌ Sign in error:', signInError);
+          Alert.alert('Error', 'Failed to create session: ' + signInError.message);
+          setLoading(false);
+          return;
+        }
+
+        if (!authData.session) {
+          console.error('❌ No session returned');
+          Alert.alert('Error', 'Failed to create session');
+          setLoading(false);
+          return;
+        }
+
+        console.log('✅ Supabase session created:', {
+          userId: authData.user.id,
+          email: authData.user.email,
+          expiresAt: new Date(authData.session.expires_at! * 1000).toISOString()
+        });
 
         await AsyncStorage.setItem('customerId', data.customerId.toString());
         await AsyncStorage.setItem('customerName', data.user.user_metadata?.full_name || 'User');
@@ -102,12 +132,12 @@ export default function VerifyOTPScreen() {
         await AsyncStorage.setItem('isAuthenticated', 'true');
 
         const userData = {
-          id: data.userId,  // Use UUID from auth.users, not integer from Customers table
+          id: data.userId,
           email: data.email || `${phoneNumber}@phone.a1taxi.local`,
           full_name: data.user.user_metadata?.full_name || 'User',
           phone_number: data.user.user_metadata?.phone_number || phoneNumber,
           role: 'customer',
-          customer_id: data.userId  // Use same UUID for consistency
+          customer_id: data.userId
         };
 
         console.log('✅ Setting authenticated user in context with UUID:', userData.id);
