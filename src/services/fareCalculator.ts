@@ -674,23 +674,39 @@ class FareCalculator {
       let calculationMethod: 'slab' | 'per_km' = 'per_km';
       let driverAllowance = 0;
 
-      // DECISION LOGIC: Slab model (no driver allowance) for trips ≤ 150km one-way AND return on same day
+      // DECISION LOGIC: Slab model (no driver allowance) for trips ≤ 150km one-way (≤ 300km total)
       // Per-km model (with driver allowance) for trips > 150km one-way OR multi-day trips
-      const shouldUseSlabPricing = oneWayDistance <= 150 && isSameDay && outstationPackageConfig?.use_slab_system;
+      // For single trips: use slab if total distance ≤ 300km and slab system is available
+      // For round trips: use slab if one-way distance ≤ 150km, same day, and slab system is available
+      const shouldUseSlabPricing = outstationPackageConfig?.use_slab_system &&
+                                   ((isRoundTrip && oneWayDistance <= 150 && isSameDay) ||
+                                    (!isRoundTrip && totalKmTravelled <= 300));
 
       console.log('🔍 [OUTSTATION] Slab pricing decision logic:', {
         oneWayDistance: oneWayDistance.toFixed(2) + 'km',
         totalKmTravelled: totalKmTravelled.toFixed(2) + 'km',
-        distanceCheck: oneWayDistance <= 150,
+        isRoundTrip,
         isSameDay,
+        numberOfDays,
+        distanceCheck_roundTrip: oneWayDistance <= 150,
+        distanceCheck_singleTrip: totalKmTravelled <= 300,
         hasSlabConfig: !!outstationPackageConfig?.use_slab_system,
         useSlabSystem: outstationPackageConfig?.use_slab_system,
         shouldUseSlabPricing,
+        reason: shouldUseSlabPricing ?
+          (isRoundTrip ? 'Round trip ≤ 150km one-way, same day' : 'Single trip ≤ 300km total') :
+          (!outstationPackageConfig?.use_slab_system ? 'Slab system not configured' :
+           isRoundTrip ? 'Round trip > 150km one-way or multi-day' : 'Single trip > 300km total'),
         decision: shouldUseSlabPricing ? 'SLAB PRICING' : 'PER-KM PRICING'
       });
 
       if (shouldUseSlabPricing) {
-        console.log('✅ [OUTSTATION] Using SLAB MODEL (≤ 150km one-way AND same-day return)');
+        console.log('✅ [OUTSTATION] Using SLAB MODEL:', {
+          tripType: isRoundTrip ? 'Round trip' : 'Single trip',
+          condition: isRoundTrip ? '≤ 150km one-way, same-day return' : '≤ 300km total distance',
+          oneWayDistance: oneWayDistance.toFixed(2) + 'km',
+          totalKmTravelled: totalKmTravelled.toFixed(2) + 'km'
+        });
         calculationMethod = 'slab';
 
         // Find the appropriate slab
