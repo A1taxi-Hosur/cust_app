@@ -8,12 +8,13 @@ import {
   Animated,
   Dimensions,
   ActivityIndicator,
+  Modal,
 } from 'react-native';
 import { CircleCheck, X, MapPin } from 'lucide-react-native';
 import { supabase } from '../utils/supabase';
 import { useRideNotifications } from '../hooks/useRideNotifications';
 
-const { width } = Dimensions.get('window');
+const { width, height } = Dimensions.get('window');
 
 export default function TripCompletionNotification() {
   const { notifications, markAsRead } = useRideNotifications();
@@ -21,7 +22,8 @@ export default function TripCompletionNotification() {
   const [notification, setNotification] = useState<any>(null);
   const [fareBreakdown, setFareBreakdown] = useState<any>(null);
   const [loading, setLoading] = useState(false);
-  const [slideAnim] = useState(new Animated.Value(width));
+  const [fadeAnim] = useState(new Animated.Value(0));
+  const [scaleAnim] = useState(new Animated.Value(0.9));
   const [shownNotifications, setShownNotifications] = useState<Set<string>>(new Set());
 
   useEffect(() => {
@@ -41,14 +43,21 @@ export default function TripCompletionNotification() {
       // Fetch fare breakdown
       fetchFareBreakdown(latest.data?.ride_id || latest.data?.rideId);
 
-      // Show notification
+      // Show notification with fade in animation
       setVisible(true);
-      Animated.spring(slideAnim, {
-        toValue: 0,
-        useNativeDriver: false,
-        tension: 65,
-        friction: 11,
-      }).start();
+      Animated.parallel([
+        Animated.timing(fadeAnim, {
+          toValue: 1,
+          duration: 300,
+          useNativeDriver: true,
+        }),
+        Animated.spring(scaleAnim, {
+          toValue: 1,
+          tension: 50,
+          friction: 7,
+          useNativeDriver: true,
+        }),
+      ]).start();
     }
   }, [notifications, visible]);
 
@@ -89,11 +98,18 @@ export default function TripCompletionNotification() {
   };
 
   const handleClose = () => {
-    Animated.timing(slideAnim, {
-      toValue: width,
-      duration: 300,
-      useNativeDriver: false,
-    }).start(() => {
+    Animated.parallel([
+      Animated.timing(fadeAnim, {
+        toValue: 0,
+        duration: 200,
+        useNativeDriver: true,
+      }),
+      Animated.timing(scaleAnim, {
+        toValue: 0.9,
+        duration: 200,
+        useNativeDriver: true,
+      }),
+    ]).start(() => {
       setVisible(false);
       setNotification(null);
       setFareBreakdown(null);
@@ -107,8 +123,23 @@ export default function TripCompletionNotification() {
   const totalFare = fareBreakdown?.total_fare || notification.data?.fareAmount || 0;
 
   return (
-    <Animated.View style={[styles.container, { transform: [{ translateX: slideAnim }] }]}>
-      <View style={styles.card}>
+    <Modal
+      visible={visible}
+      transparent={true}
+      animationType="none"
+      onRequestClose={handleClose}
+    >
+      <Animated.View style={[styles.overlay, { opacity: fadeAnim }]}>
+        <TouchableOpacity
+          style={styles.overlayTouchable}
+          activeOpacity={1}
+          onPress={handleClose}
+        />
+        <Animated.View style={[styles.modalContent, {
+          opacity: fadeAnim,
+          transform: [{ scale: scaleAnim }]
+        }]}>
+          <View style={styles.card}>
         {/* Header */}
         <View style={styles.header}>
           <View style={styles.headerLeft}>
@@ -309,36 +340,51 @@ export default function TripCompletionNotification() {
             <Text style={styles.doneButtonText}>Done</Text>
           </TouchableOpacity>
         </ScrollView>
-      </View>
-    </Animated.View>
+          </View>
+        </Animated.View>
+      </Animated.View>
+    </Modal>
   );
 }
 
 const styles = StyleSheet.create({
-  container: {
+  overlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0, 0, 0, 0.6)',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  overlayTouchable: {
     position: 'absolute',
-    top: 60,
-    right: 16,
-    zIndex: 10000,
-    width: width > 400 ? 320 : width - 32,
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+  },
+  modalContent: {
+    width: width > 500 ? 450 : width - 32,
+    maxWidth: 450,
+    maxHeight: height * 0.9,
   },
   card: {
     backgroundColor: '#FFFFFF',
-    borderRadius: 16,
+    borderRadius: 20,
     shadowColor: '#000',
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.15,
-    shadowRadius: 12,
-    elevation: 8,
-    maxHeight: '85vh',
+    shadowOffset: { width: 0, height: 8 },
+    shadowOpacity: 0.3,
+    shadowRadius: 20,
+    elevation: 16,
+    overflow: 'hidden',
   },
   header: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    padding: 16,
+    padding: 20,
+    paddingBottom: 16,
     borderBottomWidth: 1,
     borderBottomColor: '#F3F4F6',
+    backgroundColor: '#F9FAFB',
   },
   headerLeft: {
     flexDirection: 'row',
@@ -346,15 +392,15 @@ const styles = StyleSheet.create({
     gap: 8,
   },
   headerTitle: {
-    fontSize: 18,
-    fontWeight: '600',
+    fontSize: 20,
+    fontWeight: '700',
     color: '#1F2937',
   },
   closeButton: {
     padding: 4,
   },
   scrollView: {
-    maxHeight: 500,
+    maxHeight: height * 0.7,
   },
   routeContainer: {
     padding: 16,
@@ -453,15 +499,21 @@ const styles = StyleSheet.create({
   },
   doneButton: {
     backgroundColor: '#10B981',
-    borderRadius: 12,
-    paddingVertical: 14,
+    borderRadius: 14,
+    paddingVertical: 16,
     marginHorizontal: 16,
     marginVertical: 16,
     alignItems: 'center',
+    shadowColor: '#10B981',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.3,
+    shadowRadius: 8,
+    elevation: 4,
   },
   doneButtonText: {
     color: '#FFFFFF',
-    fontSize: 16,
-    fontWeight: '600',
+    fontSize: 17,
+    fontWeight: '700',
+    letterSpacing: 0.5,
   },
 });
