@@ -81,17 +81,15 @@ export default function OutstationBookingScreen() {
 
   // Calculate number of days whenever dates or round trip status changes
   useEffect(() => {
-    console.log('🔄 [DAYS-EFFECT] Date/trip change detected, recalculating...');
-
     if (isRoundTrip) {
       const startDate = new Date(departureDate);
       const endDate = new Date(returnDate);
-
+      
       // Calculate difference in days
       const timeDifference = endDate.getTime() - startDate.getTime();
       const daysDifference = Math.ceil(timeDifference / (1000 * 60 * 60 * 24));
       const calculatedDays = Math.max(1, daysDifference);
-
+      
       console.log('📅 [DAYS-EFFECT] Round trip days calculation:', {
         departure: startDate.toDateString(),
         return: endDate.toDateString(),
@@ -100,23 +98,26 @@ export default function OutstationBookingScreen() {
         final_days: calculatedDays,
         current_numberOfDays: numberOfDays
       });
-
+      
       if (calculatedDays !== numberOfDays) {
         console.log('🔄 [DAYS-EFFECT] Days changed from', numberOfDays, 'to', calculatedDays);
         setNumberOfDays(calculatedDays);
+        
+        // Recalculate fares when days change
+        if (pickupCoords && destinationCoords) {
+          setTimeout(() => calculateAllOutstationFares(), 200);
+        }
       }
     } else {
       // Single trip - always 1 day
       if (numberOfDays !== 1) {
         console.log('🔄 [DAYS-EFFECT] Single trip - setting to 1 day');
         setNumberOfDays(1);
+        
+        if (pickupCoords && destinationCoords) {
+          setTimeout(() => calculateAllOutstationFares(), 200);
+        }
       }
-    }
-
-    // ALWAYS recalculate fares when dates change
-    if (pickupCoords && destinationCoords) {
-      console.log('🔄 [DAYS-EFFECT] Triggering fare recalculation due to date change');
-      setTimeout(() => calculateAllOutstationFares(), 200);
     }
   }, [departureDate, returnDate, isRoundTrip]);
 
@@ -140,102 +141,64 @@ export default function OutstationBookingScreen() {
 
   const loadOutstationConfigs = async () => {
     try {
-      console.log('🚗 [OUTSTATION] ========== LOADING VEHICLE CONFIGS ==========');
-      console.log('🚗 [OUTSTATION] Fetching from outstation_packages and outstation_fares tables...');
-
+      console.log('📊 Loading outstation configs from database...');
+      
       // Get both outstation package configs and per-km configs
       const [packageConfigs, perKmConfigs] = await Promise.all([
         supabase.from('outstation_packages').select('*').eq('is_active', true),
         supabase.from('outstation_fares').select('*').eq('is_active', true)
       ]);
-
-      console.log('🚗 [OUTSTATION] Database query results:', {
-        packageConfigs: {
-          count: packageConfigs.data?.length || 0,
-          error: packageConfigs.error,
-          vehicleTypes: packageConfigs.data?.map(c => c.vehicle_type) || []
-        },
-        perKmConfigs: {
-          count: perKmConfigs.data?.length || 0,
-          error: perKmConfigs.error,
-          vehicleTypes: perKmConfigs.data?.map(c => c.vehicle_type) || []
-        }
+      
+      console.log('📊 Raw config query results:', {
+        packageConfigs: packageConfigs.data?.length || 0,
+        perKmConfigs: perKmConfigs.data?.length || 0,
+        packageVehicleTypes: packageConfigs.data?.map(c => c.vehicle_type) || [],
+        perKmVehicleTypes: perKmConfigs.data?.map(c => c.vehicle_type) || []
       });
-
-      // Check for errors
-      if (packageConfigs.error) {
-        console.error('❌ [OUTSTATION] Error fetching package configs:', packageConfigs.error);
-      }
-      if (perKmConfigs.error) {
-        console.error('❌ [OUTSTATION] Error fetching per-km configs:', perKmConfigs.error);
-      }
-
+      
       // Combine configs from both tables
       const configs: any[] = [];
-
+      
       // Get unique vehicle types from both tables
       const packageVehicleTypes = packageConfigs.data?.map(c => c.vehicle_type) || [];
       const perKmVehicleTypes = perKmConfigs.data?.map(c => c.vehicle_type) || [];
       const allVehicleTypes = [...new Set([...packageVehicleTypes, ...perKmVehicleTypes])];
-
-      console.log('🚗 [OUTSTATION] Unique vehicle types found:', allVehicleTypes);
-
-      if (allVehicleTypes.length === 0) {
-        console.warn('⚠️ [OUTSTATION] No vehicle types found in database, will use fallback');
-        throw new Error('No vehicle types found');
-      }
-
+      
+      console.log('📊 All vehicle types found:', allVehicleTypes);
+      
       for (const vehicleType of allVehicleTypes) {
         const packageConfig = packageConfigs.data?.find(c => c.vehicle_type === vehicleType);
         const perKmConfig = perKmConfigs.data?.find(c => c.vehicle_type === vehicleType);
-
-        const config = {
+        
+        configs.push({
           vehicle_type: vehicleType,
           hasSlabSystem: !!packageConfig?.use_slab_system,
-          per_km_rate: parseFloat(perKmConfig?.per_km_rate?.toString() || '14'),
-          driver_allowance_per_day: parseFloat(
-            perKmConfig?.driver_allowance_per_day?.toString() ||
-            packageConfig?.driver_allowance_per_day?.toString() ||
-            '300'
-          ),
+          per_km_rate: perKmConfig?.per_km_rate || 14,
+          driver_allowance_per_day: perKmConfig?.driver_allowance_per_day || packageConfig?.driver_allowance_per_day || 300,
           packageConfig,
           perKmConfig
-        };
-
-        console.log(`✅ [OUTSTATION] ${vehicleType}:`, {
-          hasSlabSystem: config.hasSlabSystem,
-          per_km_rate: config.per_km_rate,
-          driver_allowance: config.driver_allowance_per_day,
-          hasPackageConfig: !!packageConfig,
-          hasPerKmConfig: !!perKmConfig
         });
-
-        configs.push(config);
       }
-
-      console.log('✅ [OUTSTATION] Total configs loaded:', configs.length);
-      console.log('✅ [OUTSTATION] Vehicle types:', configs.map(c => c.vehicle_type).join(', '));
-      console.log('✅ [OUTSTATION] ========== CONFIGS LOADED SUCCESSFULLY ==========');
-
+      
+      console.log('📊 Loaded outstation configs:', configs.length);
+      console.log('📊 Vehicle types available:', configs.map(c => c.vehicle_type));
       setOutstationConfigs(configs);
     } catch (error) {
-      console.error('❌ [OUTSTATION] Error loading configs:', error);
-      console.log('⚠️ [OUTSTATION] Using fallback vehicle configs');
-
+      console.error('Error loading outstation configs:', error);
+      
       // Fallback to default vehicle types if database fails
       const fallbackConfigs = [
-        { vehicle_type: 'hatchback', per_km_rate: 10, driver_allowance_per_day: 300, hasSlabSystem: false },
-        { vehicle_type: 'hatchback_ac', per_km_rate: 12, driver_allowance_per_day: 300, hasSlabSystem: false },
-        { vehicle_type: 'sedan', per_km_rate: 14, driver_allowance_per_day: 300, hasSlabSystem: false },
-        { vehicle_type: 'sedan_ac', per_km_rate: 16, driver_allowance_per_day: 300, hasSlabSystem: false },
-        { vehicle_type: 'suv', per_km_rate: 18, driver_allowance_per_day: 300, hasSlabSystem: false },
-        { vehicle_type: 'suv_ac', per_km_rate: 20, driver_allowance_per_day: 300, hasSlabSystem: false },
+        { vehicle_type: 'hatchback', per_km_rate: 10, driver_allowance_per_day: 300 },
+        { vehicle_type: 'hatchback_ac', per_km_rate: 12, driver_allowance_per_day: 300 },
+        { vehicle_type: 'sedan', per_km_rate: 14, driver_allowance_per_day: 300 },
+        { vehicle_type: 'sedan_ac', per_km_rate: 16, driver_allowance_per_day: 300 },
+        { vehicle_type: 'suv', per_km_rate: 18, driver_allowance_per_day: 300 },
+        { vehicle_type: 'suv_ac', per_km_rate: 20, driver_allowance_per_day: 300 },
       ];
-
-      console.log('📊 [OUTSTATION] Fallback configs set:', fallbackConfigs.length, 'vehicles');
+      
+      console.log('📊 Using fallback configs:', fallbackConfigs.length);
       setOutstationConfigs(fallbackConfigs);
     } finally {
-      console.log('🏁 [OUTSTATION] Config loading complete, setting configsLoading to false');
       setConfigsLoading(false);
     }
   };
@@ -289,51 +252,25 @@ export default function OutstationBookingScreen() {
     try {
       // Calculate days FRESH every time - no caching
       let currentNumberOfDays = 1;
-      let isSameDayTrip = true;
-
       if (isRoundTrip) {
         const startDate = new Date(departureDate);
         const endDate = new Date(returnDate);
         const timeDifference = endDate.getTime() - startDate.getTime();
         const daysDifference = Math.ceil(timeDifference / (1000 * 60 * 60 * 24));
         currentNumberOfDays = Math.max(1, daysDifference);
-
-        // Check if it's same-day by comparing dates (ignoring time)
-        const startDateOnly = new Date(startDate.getFullYear(), startDate.getMonth(), startDate.getDate());
-        const endDateOnly = new Date(endDate.getFullYear(), endDate.getMonth(), endDate.getDate());
-        isSameDayTrip = startDateOnly.getTime() === endDateOnly.getTime();
-
-        console.log('📅 [SAME-DAY-CHECK] Date comparison details:', {
-          departureDate: departureDate.toISOString(),
-          returnDate: returnDate.toISOString(),
-          startDate: startDate.toISOString(),
-          endDate: endDate.toISOString(),
-          startDateOnly: startDateOnly.toISOString(),
-          endDateOnly: endDateOnly.toISOString(),
-          startDateOnlyTime: startDateOnly.getTime(),
-          endDateOnlyTime: endDateOnly.getTime(),
-          timeDifferenceMs: timeDifference,
-          daysDifference,
-          currentNumberOfDays,
-          isSameDayTrip,
-          areEqual: startDateOnly.getTime() === endDateOnly.getTime()
-        });
-      } else {
-        console.log('📅 [SAME-DAY-CHECK] Single trip (not round trip) - isSameDayTrip=true by default');
       }
-
+      
       console.log('💰 [OUTSTATION-CALC] ===== STARTING NEW SLAB/PER-KM FARE CALCULATION =====');
       console.log('💰 [OUTSTATION-CALC] Current state:', {
         isRoundTrip,
         numberOfDays: currentNumberOfDays,
-        isSameDayTrip,
         departureDate: departureDate.toISOString(),
         returnDate: returnDate.toISOString(),
         selectedVehicle,
         pickup: pickupCoords,
         destination: destinationCoords,
         freshDaysCalculation: currentNumberOfDays,
-        newLogic: 'Slab model for same-day trips ≤ 150km one-way, per-km for others'
+        newLogic: 'Slab model for single-day trips < 300km, per-km for others'
       });
 
       // Update numberOfDays state with fresh calculation
@@ -374,28 +311,23 @@ export default function OutstationBookingScreen() {
             destinationCoords,
             config.vehicle_type,
             isRoundTrip,
-            currentNumberOfDays,
-            isSameDayTrip
+            currentNumberOfDays
           );
           
           if (fareBreakdown) {
             const finalFare = fareBreakdown.totalFare;
             fares[config.vehicle_type] = finalFare;
-
+            
             console.log(`💰 [OUTSTATION-CALC] ${config.vehicle_type} calculation completed:`, {
               final_fare: `₹${finalFare}`,
               calculation_method: (fareBreakdown as any).calculationMethod || 'unknown',
               distance: fareBreakdown.distance + 'km',
               trip_type: isRoundTrip ? 'Round Trip' : 'Single Day',
               days: currentNumberOfDays,
-              isSameDayTrip,
               breakdown_summary: {
                 baseFare: fareBreakdown.baseFare,
                 distanceFare: fareBreakdown.distanceFare,
                 timeFare: fareBreakdown.timeFare,
-                surgeFare: fareBreakdown.surgeFare,
-                platformFee: fareBreakdown.platformFee,
-                deadheadCharge: fareBreakdown.deadheadCharge,
                 totalFare: fareBreakdown.totalFare
               }
             });
@@ -495,50 +427,31 @@ export default function OutstationBookingScreen() {
     setLoading(true);
     
     try {
-      console.log('🎯 [OUTSTATION] Creating booking via edge function...');
+      console.log('🎯 [OUTSTATION] Inserting booking into database...');
+      const { data, error } = await supabase
+        .from('scheduled_bookings')
+        .insert({
+          customer_id: user.id,
+          booking_type: 'outstation',
+          vehicle_type: selectedVehicle,
+          pickup_address: pickupLocation,
+          pickup_latitude: pickupCoords.latitude,
+          pickup_longitude: pickupCoords.longitude,
+          destination_address: destinationLocation,
+          destination_latitude: destinationCoords.latitude,
+          destination_longitude: destinationCoords.longitude,
+          scheduled_time: departureDate.toISOString(),
+          estimated_fare: calculatedFares[selectedVehicle] || 0,
+          special_instructions: `Outstation trip - ${isRoundTrip ? 'Round trip' : 'One way'}. Departure: ${departureDate.toLocaleString()}.`,
+          status: 'pending',
+        })
+        .select()
+        .single();
 
-      const supabaseUrl = process.env.EXPO_PUBLIC_SUPABASE_URL;
-      const supabaseKey = process.env.EXPO_PUBLIC_SUPABASE_ANON_KEY;
-
-      const bookingData = {
-        customer_id: user.id,
-        booking_type: 'outstation',
-        vehicle_type: selectedVehicle,
-        pickup_address: pickupLocation,
-        pickup_latitude: pickupCoords.latitude,
-        pickup_longitude: pickupCoords.longitude,
-        destination_address: destinationLocation,
-        destination_latitude: destinationCoords.latitude,
-        destination_longitude: destinationCoords.longitude,
-        scheduled_time: departureDate.toISOString(),
-        estimated_fare: calculatedFares[selectedVehicle] || 0,
-        special_instructions: `Outstation trip - ${isRoundTrip ? 'Round trip' : 'One way'}. Departure: ${departureDate.toLocaleString()}.`,
-        status: 'pending',
-      };
-
-      const response = await fetch(`${supabaseUrl}/functions/v1/create-scheduled-booking`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${supabaseKey}`,
-        },
-        body: JSON.stringify(bookingData),
-      });
-
-      if (!response.ok) {
-        const errorText = await response.text();
-        console.error('🎯 [OUTSTATION] Edge function error:', errorText);
-        throw new Error(errorText);
+      if (error) {
+        console.error('🎯 [OUTSTATION] Database error:', error);
+        throw error;
       }
-
-      const result = await response.json();
-
-      if (result.error) {
-        console.error('🎯 [OUTSTATION] Database error:', result.error);
-        throw new Error(result.error);
-      }
-
-      const data = result.data;
 
       console.log('🎯 [OUTSTATION] Booking created successfully:', data.id);
 
@@ -721,7 +634,7 @@ export default function OutstationBookingScreen() {
                   {outstationConfigs.map((config) => {
                     const isSelected = selectedVehicle === config.vehicle_type;
                     const vehicleFare = calculatedFares[config.vehicle_type];
-
+                    
                     return (
                       <TouchableOpacity
                         key={config.vehicle_type}
@@ -738,20 +651,29 @@ export default function OutstationBookingScreen() {
                         ]}>
                           <Text style={styles.vehicleEmoji}>🚗</Text>
                         </View>
-
+                        
                         <Text style={[
                           styles.vehicleName,
                           isSelected && styles.selectedVehicleText,
                         ]}>
                           {formatVehicleName(config.vehicle_type)}
                         </Text>
-
+                        
                         <Text style={[
-                          styles.vehicleFare,
+                          styles.vehicleDescription,
                           isSelected && styles.selectedVehicleText,
                         ]}>
-                          {vehicleFare ? `₹${vehicleFare.toLocaleString('en-IN')}` : 'Calculating...'}
+                          {getVehicleDescription(config.vehicle_type)}
                         </Text>
+                        
+                        {vehicleFare && (
+                          <Text style={[
+                            styles.vehicleFare,
+                            isSelected && styles.selectedVehicleText,
+                          ]}>
+                            ₹{vehicleFare.toLocaleString('en-IN')}
+                          </Text>
+                        )}
                       </TouchableOpacity>
                     );
                   })}
@@ -767,7 +689,7 @@ export default function OutstationBookingScreen() {
             {(fareCalculating || calculatedFares[selectedVehicle]) && (
               <View style={styles.fareContainer}>
                 <Text style={styles.fareLabel}>Estimated Fare</Text>
-
+                
                 {fareCalculating ? (
                   <View style={styles.calculatingContainer}>
                     <ActivityIndicator size="small" color="#DC2626" />
@@ -779,11 +701,9 @@ export default function OutstationBookingScreen() {
                   </Text>
                 )}
                 <Text style={styles.fareNote}>
-                  {routeInfo && routeInfo.distance > 0 && `${Math.round(routeInfo.distance)}km one-way`}
-                  {isRoundTrip && ` • ${numberOfDays} day${numberOfDays > 1 ? 's' : ''}`}
-                  {routeInfo && routeInfo.distance <= 150 && numberOfDays === 1 && ` • Slab pricing (no driver allowance)`}
-                  {routeInfo && (routeInfo.distance > 150 || numberOfDays > 1) && ` • Per-km + driver allowance`}
-                  {isRoundTrip && numberOfDays > 1 && ` (300km/day limit)`}
+                  {routeInfo && routeInfo.distance > 0 && ` • ${Math.round(routeInfo.distance)}km`}
+                  {` • Total distance traveled`}
+                  {` • ${isRoundTrip ? 'Per-km model' : 'Slab model (no driver allowance < 300km)'}`}
                 </Text>
               </View>
             )}
@@ -1002,8 +922,7 @@ const styles = StyleSheet.create({
     fontSize: 14,
     fontWeight: 'bold',
     color: '#059669',
-    marginTop: 8,
-    textAlign: 'center',
+    marginTop: 4,
   },
   loadingVehiclesContainer: {
     flexDirection: 'row',
