@@ -93,37 +93,40 @@ export default function VerifyOTPScreen() {
         return;
       }
 
-      if (data.success && data.userId) {
+      if (data.success && data.userId && data.session) {
         console.log('✅ OTP verified, user ID (UUID):', data.userId);
         console.log('✅ Customer ID (integer):', data.customerId);
-        console.log('✅ Email:', data.email);
-        console.log('✅ Password:', data.password);
-
-        // Sign in with Supabase to create a proper session
-        console.log('🔐 Signing in with Supabase...');
-        const { data: authData, error: signInError } = await supabase.auth.signInWithPassword({
-          email: data.email,
-          password: data.password,
+        console.log('✅ Session received:', {
+          hasAccessToken: !!data.session.access_token,
+          hasRefreshToken: !!data.session.refresh_token,
+          expiresAt: data.session.expires_at
         });
 
-        if (signInError) {
-          console.error('❌ Sign in error:', signInError);
-          Alert.alert('Error', 'Failed to create session: ' + signInError.message);
+        // Set the session directly in Supabase client
+        console.log('🔐 Setting Supabase session...');
+        const { data: sessionData, error: sessionError } = await supabase.auth.setSession({
+          access_token: data.session.access_token,
+          refresh_token: data.session.refresh_token,
+        });
+
+        if (sessionError) {
+          console.error('❌ Session error:', sessionError);
+          Alert.alert('Error', 'Failed to create session: ' + sessionError.message);
           setLoading(false);
           return;
         }
 
-        if (!authData.session) {
+        if (!sessionData.session) {
           console.error('❌ No session returned');
           Alert.alert('Error', 'Failed to create session');
           setLoading(false);
           return;
         }
 
-        console.log('✅ Supabase session created:', {
-          userId: authData.user.id,
-          email: authData.user.email,
-          expiresAt: new Date(authData.session.expires_at! * 1000).toISOString()
+        console.log('✅ Supabase session set successfully:', {
+          userId: sessionData.user.id,
+          email: sessionData.user.email,
+          expiresAt: new Date(sessionData.session.expires_at! * 1000).toISOString()
         });
 
         await AsyncStorage.setItem('customerId', data.customerId.toString());
@@ -133,7 +136,7 @@ export default function VerifyOTPScreen() {
 
         const userData = {
           id: data.userId,
-          email: data.email || `${phoneNumber}@phone.a1taxi.local`,
+          email: data.user.email || `${phoneNumber}@phone.a1taxi.local`,
           full_name: data.user.user_metadata?.full_name || 'User',
           phone_number: data.user.user_metadata?.phone_number || phoneNumber,
           role: 'customer',

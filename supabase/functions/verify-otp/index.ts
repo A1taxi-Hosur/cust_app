@@ -207,18 +207,46 @@ Deno.serve(async (req: Request) => {
     }
 
     console.log('✅ Customer and auth user setup complete');
-    console.log('🔐 Returning success with credentials');
+    console.log('🔐 Generating session for user:', authUser.id);
 
-    const dummyEmail = `${phoneNumber.replace(/\+/g, '').replace(/\s/g, '')}@phone.a1taxi.local`;
-    const defaultPassword = `A1Taxi${phoneNumber.replace(/\D/g, '')}!`;
+    // Generate a sign-in link which includes access and refresh tokens
+    const { data: linkData, error: linkError } = await supabase.auth.admin.generateLink({
+      type: 'magiclink',
+      email: authUser.email!,
+      options: {
+        redirectTo: 'http://localhost:8081'
+      }
+    });
+
+    if (linkError || !linkData) {
+      console.error('❌ Error generating session link:', linkError);
+      return new Response(
+        JSON.stringify({ error: 'Failed to generate session' }),
+        {
+          status: 500,
+          headers: {
+            'Content-Type': 'application/json',
+            ...corsHeaders,
+          },
+        }
+      );
+    }
+
+    console.log('✅ Session tokens generated successfully');
 
     return new Response(
       JSON.stringify({
         success: true,
         customerId,
         userId: authUser.id,
-        email: dummyEmail,
-        password: defaultPassword,
+        session: {
+          access_token: linkData.properties.access_token,
+          refresh_token: linkData.properties.refresh_token,
+          expires_in: linkData.properties.expires_in,
+          expires_at: linkData.properties.expires_at,
+          token_type: 'bearer',
+          user: linkData.user
+        },
         user: {
           id: authUser.id,
           email: authUser.email,
