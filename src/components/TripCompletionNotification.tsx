@@ -9,8 +9,9 @@ import {
   Dimensions,
   ActivityIndicator,
   Modal,
+  Alert,
 } from 'react-native';
-import { CircleCheck, X, MapPin } from 'lucide-react-native';
+import { CircleCheck, X, MapPin, Download, Star } from 'lucide-react-native';
 import { supabase } from '../utils/supabase';
 import { useRideNotifications } from '../hooks/useRideNotifications';
 
@@ -22,6 +23,9 @@ export default function TripCompletionNotification() {
   const [notification, setNotification] = useState<any>(null);
   const [fareBreakdown, setFareBreakdown] = useState<any>(null);
   const [loading, setLoading] = useState(false);
+  const [rating, setRating] = useState(0);
+  const [ratingSubmitted, setRatingSubmitted] = useState(false);
+  const [submittingRating, setSubmittingRating] = useState(false);
   const [fadeAnim] = useState(new Animated.Value(0));
   const [scaleAnim] = useState(new Animated.Value(0.9));
   const [shownNotifications, setShownNotifications] = useState<Set<string>>(new Set());
@@ -161,6 +165,193 @@ export default function TripCompletionNotification() {
     }
   };
 
+  const handleDownloadBill = async () => {
+    if (!fareBreakdown) {
+      Alert.alert('Error', 'Fare breakdown not available');
+      return;
+    }
+
+    try {
+      console.log('📄 [TRIP_NOTIFICATION] Downloading bill...');
+
+      // Generate bill content
+      const billContent = generateBillContent();
+
+      // On web, create a downloadable HTML file
+      if (typeof window !== 'undefined') {
+        const blob = new Blob([billContent], { type: 'text/html' });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = `trip-bill-${Date.now()}.html`;
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+        URL.revokeObjectURL(url);
+
+        Alert.alert('Success', 'Bill downloaded successfully!');
+      }
+    } catch (error) {
+      console.error('Error downloading bill:', error);
+      Alert.alert('Error', 'Failed to download bill');
+    }
+  };
+
+  const generateBillContent = () => {
+    const bookingId = notification?.data?.booking_id || notification?.data?.bookingId || 'N/A';
+    const date = fareBreakdown?.completed_at || new Date().toISOString();
+
+    return `
+      <!DOCTYPE html>
+      <html>
+      <head>
+        <title>Trip Bill</title>
+        <style>
+          body { font-family: Arial, sans-serif; padding: 40px; max-width: 800px; margin: 0 auto; }
+          .header { text-align: center; margin-bottom: 30px; }
+          .header h1 { color: #10B981; margin: 0; }
+          .info { margin: 20px 0; }
+          .info-row { display: flex; justify-content: space-between; padding: 8px 0; border-bottom: 1px solid #E5E7EB; }
+          .fare-section { margin: 30px 0; }
+          .fare-row { display: flex; justify-content: space-between; padding: 10px 0; }
+          .total-row { font-weight: bold; font-size: 18px; border-top: 2px solid #000; padding-top: 15px; margin-top: 15px; }
+        </style>
+      </head>
+      <body>
+        <div class="header">
+          <h1>A1 Taxi</h1>
+          <p>Trip Bill</p>
+        </div>
+
+        <div class="info">
+          <div class="info-row">
+            <span>Booking ID:</span>
+            <span>${bookingId}</span>
+          </div>
+          <div class="info-row">
+            <span>Date:</span>
+            <span>${new Date(date).toLocaleString()}</span>
+          </div>
+          <div class="info-row">
+            <span>Booking Type:</span>
+            <span>${fareBreakdown?.booking_type || 'N/A'}</span>
+          </div>
+          <div class="info-row">
+            <span>From:</span>
+            <span>${fareBreakdown?.pickup_address || 'N/A'}</span>
+          </div>
+          <div class="info-row">
+            <span>To:</span>
+            <span>${fareBreakdown?.destination_address || 'N/A'}</span>
+          </div>
+        </div>
+
+        <div class="fare-section">
+          <h3>Fare Breakdown</h3>
+          ${fareBreakdown?.base_fare > 0 ? `<div class="fare-row"><span>Base Fare</span><span>₹${fareBreakdown.base_fare.toFixed(2)}</span></div>` : ''}
+          ${fareBreakdown?.hourly_charges > 0 ? `<div class="fare-row"><span>Hourly Charges</span><span>₹${fareBreakdown.hourly_charges.toFixed(2)}</span></div>` : ''}
+          ${fareBreakdown?.per_day_charges > 0 ? `<div class="fare-row"><span>Per Day Charges</span><span>₹${fareBreakdown.per_day_charges.toFixed(2)}</span></div>` : ''}
+          ${fareBreakdown?.distance_fare > 0 ? `<div class="fare-row"><span>Distance Charges (${fareBreakdown.actual_distance_km?.toFixed(1)}km)</span><span>₹${fareBreakdown.distance_fare.toFixed(2)}</span></div>` : ''}
+          ${fareBreakdown?.platform_fee > 0 ? `<div class="fare-row"><span>Platform Fee</span><span>₹${fareBreakdown.platform_fee.toFixed(2)}</span></div>` : ''}
+          ${fareBreakdown?.gst_on_charges > 0 ? `<div class="fare-row"><span>GST on Charges (5%)</span><span>₹${fareBreakdown.gst_on_charges.toFixed(2)}</span></div>` : ''}
+          ${fareBreakdown?.gst_on_platform_fee > 0 ? `<div class="fare-row"><span>GST on Platform Fee (18%)</span><span>₹${fareBreakdown.gst_on_platform_fee.toFixed(2)}</span></div>` : ''}
+          ${fareBreakdown?.driver_allowance > 0 ? `<div class="fare-row"><span>Driver Allowance</span><span>₹${fareBreakdown.driver_allowance.toFixed(2)}</span></div>` : ''}
+          ${fareBreakdown?.extra_km_charges > 0 ? `<div class="fare-row"><span>Extra KM Charges</span><span>₹${fareBreakdown.extra_km_charges.toFixed(2)}</span></div>` : ''}
+          ${fareBreakdown?.extra_hour_charges > 0 ? `<div class="fare-row"><span>Extra Hour Charges</span><span>₹${fareBreakdown.extra_hour_charges.toFixed(2)}</span></div>` : ''}
+          ${fareBreakdown?.airport_surcharge > 0 ? `<div class="fare-row"><span>Airport Surcharge</span><span>₹${fareBreakdown.airport_surcharge.toFixed(2)}</span></div>` : ''}
+          ${fareBreakdown?.toll_charges > 0 ? `<div class="fare-row"><span>Toll Charges</span><span>₹${fareBreakdown.toll_charges.toFixed(2)}</span></div>` : ''}
+
+          <div class="fare-row total-row">
+            <span>Total Fare</span>
+            <span>₹${fareBreakdown?.total_fare?.toFixed(2) || '0.00'}</span>
+          </div>
+        </div>
+      </body>
+      </html>
+    `;
+  };
+
+  const handleRating = async (selectedRating: number) => {
+    setRating(selectedRating);
+    setSubmittingRating(true);
+
+    try {
+      const driverId = fareBreakdown?.driver_id;
+      const bookingId = notification?.data?.booking_id || notification?.data?.bookingId;
+      const rideId = notification?.data?.ride_id || notification?.data?.rideId;
+
+      if (!driverId) {
+        Alert.alert('Error', 'Driver information not available');
+        return;
+      }
+
+      console.log('⭐ [TRIP_NOTIFICATION] Submitting rating:', {
+        rating: selectedRating,
+        driverId,
+        bookingId,
+        rideId,
+      });
+
+      // Update the appropriate table based on booking type
+      const bookingType = fareBreakdown?.booking_type || 'regular';
+
+      if (bookingType === 'rental' || bookingType === 'outstation' || bookingType === 'airport') {
+        // Update scheduled_bookings rating
+        const { error } = await supabase
+          .from('scheduled_bookings')
+          .update({
+            customer_rating: selectedRating,
+            updated_at: new Date().toISOString()
+          })
+          .eq('id', bookingId);
+
+        if (error) throw error;
+      } else {
+        // Update rides table rating
+        const { error } = await supabase
+          .from('rides')
+          .update({
+            rating: selectedRating,
+            updated_at: new Date().toISOString()
+          })
+          .eq('id', rideId);
+
+        if (error) throw error;
+      }
+
+      // Update driver's average rating
+      const { data: driverData } = await supabase
+        .from('drivers')
+        .select('rating, total_rides')
+        .eq('id', driverId)
+        .single();
+
+      if (driverData) {
+        const currentRating = driverData.rating || 0;
+        const totalRides = driverData.total_rides || 0;
+        const newAverageRating = ((currentRating * totalRides) + selectedRating) / (totalRides + 1);
+
+        await supabase
+          .from('drivers')
+          .update({
+            rating: newAverageRating,
+            updated_at: new Date().toISOString()
+          })
+          .eq('id', driverId);
+      }
+
+      setRatingSubmitted(true);
+      console.log('✅ [TRIP_NOTIFICATION] Rating submitted successfully');
+
+    } catch (error) {
+      console.error('Error submitting rating:', error);
+      Alert.alert('Error', 'Failed to submit rating. Please try again.');
+      setRating(0);
+    } finally {
+      setSubmittingRating(false);
+    }
+  };
+
   const handleDone = () => {
     if (notification) {
       markAsRead(notification.id);
@@ -184,6 +375,8 @@ export default function TripCompletionNotification() {
       setVisible(false);
       setNotification(null);
       setFareBreakdown(null);
+      setRating(0);
+      setRatingSubmitted(false);
     });
   };
 
@@ -465,6 +658,48 @@ export default function TripCompletionNotification() {
             <Text style={styles.totalValue}>₹{totalFare.toFixed(2)}</Text>
           </View>
 
+          {/* Rating Section */}
+          {fareBreakdown?.driver_name && (
+            <View style={styles.ratingSection}>
+              <Text style={styles.ratingTitle}>Rate Your Driver</Text>
+              <Text style={styles.driverName}>{fareBreakdown.driver_name}</Text>
+
+              {!ratingSubmitted ? (
+                <View style={styles.starsContainer}>
+                  {[1, 2, 3, 4, 5].map((star) => (
+                    <TouchableOpacity
+                      key={star}
+                      onPress={() => handleRating(star)}
+                      disabled={submittingRating}
+                      style={styles.starButton}
+                    >
+                      <Star
+                        size={32}
+                        color={star <= rating ? '#FCD34D' : '#D1D5DB'}
+                        fill={star <= rating ? '#FCD34D' : 'transparent'}
+                      />
+                    </TouchableOpacity>
+                  ))}
+                </View>
+              ) : (
+                <View style={styles.ratingSubmittedContainer}>
+                  <CircleCheck size={24} color="#10B981" />
+                  <Text style={styles.ratingSubmittedText}>Thank you for rating!</Text>
+                </View>
+              )}
+            </View>
+          )}
+
+          {/* Download Bill Button */}
+          <TouchableOpacity
+            style={styles.downloadButton}
+            onPress={handleDownloadBill}
+            disabled={!fareBreakdown}
+          >
+            <Download size={20} color="#10B981" />
+            <Text style={styles.downloadButtonText}>Download Bill</Text>
+          </TouchableOpacity>
+
           {/* Done Button */}
           <TouchableOpacity style={styles.doneButton} onPress={handleDone}>
             <Text style={styles.doneButtonText}>Done</Text>
@@ -626,6 +861,62 @@ const styles = StyleSheet.create({
     fontSize: 20,
     fontWeight: '700',
     color: '#10B981',
+  },
+  ratingSection: {
+    paddingHorizontal: 16,
+    paddingVertical: 20,
+    borderTopWidth: 1,
+    borderTopColor: '#F3F4F6',
+    marginTop: 8,
+    alignItems: 'center',
+  },
+  ratingTitle: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: '#1F2937',
+    marginBottom: 4,
+  },
+  driverName: {
+    fontSize: 14,
+    color: '#6B7280',
+    marginBottom: 12,
+  },
+  starsContainer: {
+    flexDirection: 'row',
+    gap: 8,
+    justifyContent: 'center',
+  },
+  starButton: {
+    padding: 4,
+  },
+  ratingSubmittedContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    paddingVertical: 8,
+  },
+  ratingSubmittedText: {
+    fontSize: 15,
+    fontWeight: '500',
+    color: '#10B981',
+  },
+  downloadButton: {
+    backgroundColor: '#F0FDF4',
+    borderRadius: 14,
+    paddingVertical: 14,
+    marginHorizontal: 16,
+    marginTop: 16,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 8,
+    borderWidth: 1,
+    borderColor: '#10B981',
+  },
+  downloadButtonText: {
+    color: '#10B981',
+    fontSize: 15,
+    fontWeight: '600',
   },
   doneButton: {
     backgroundColor: '#10B981',
