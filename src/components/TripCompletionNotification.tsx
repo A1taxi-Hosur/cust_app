@@ -147,6 +147,8 @@ export default function TripCompletionNotification() {
             total_fare: bookingInfo.estimated_fare || 0,
             actual_distance_km: 0,
             actual_duration_minutes: 0,
+            pickup_address: bookingInfo.pickup_address,
+            destination_address: bookingInfo.destination_address,
           });
         } else {
           console.log('❌ [TRIP_NOTIFICATION] No data found for ID:', rideOrBookingId);
@@ -187,8 +189,15 @@ export default function TripCompletionNotification() {
 
   if (!visible || !notification) return null;
 
-  const pickupAddress = notification.data?.pickupAddress || notification.data?.pickup_address || '';
-  const destinationAddress = notification.data?.destinationAddress || notification.data?.destination_address || '';
+  // Get addresses from fareBreakdown (trip completion data) first, then fallback to notification data
+  const pickupAddress = fareBreakdown?.pickup_address ||
+                       notification.data?.pickupAddress ||
+                       notification.data?.pickup_address ||
+                       'Pickup location';
+  const destinationAddress = fareBreakdown?.destination_address ||
+                            notification.data?.destinationAddress ||
+                            notification.data?.destination_address ||
+                            'Destination';
   const totalFare = fareBreakdown?.total_fare || notification.data?.fareAmount || 0;
 
   return (
