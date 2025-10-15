@@ -74,6 +74,7 @@ export default function TripCompletionModal() {
     console.log('🏁 [MODAL] Unread trip completed:', notifications.filter(n => n.type === 'trip_completed' && n.status === 'unread').length);
     console.log('🏁 [MODAL] Read trip completed:', notifications.filter(n => n.type === 'trip_completed' && n.status === 'read').length);
     console.log('🏁 [MODAL] Current modal state:', { visible, hasRide: !!ride });
+    console.log('🏁 [MODAL] Processed notification IDs:', Array.from(processedNotificationIds));
     
     // DETAILED ANALYSIS OF ALL TRIP_COMPLETED NOTIFICATIONS
     console.log('🏁 [MODAL] ===== DETAILED TRIP COMPLETION ANALYSIS =====');
@@ -112,6 +113,17 @@ export default function TripCompletionModal() {
       const notProcessed = !processedNotificationIds.has(n.id);
       const hasRideData = !!(n.data?.ride_id || n.data?.booking_id || n.data?.rideId || n.data?.bookingId);
       const notTestData = !(n.data?.rideId?.startsWith('test-') || n.data?.ride_id?.startsWith('test-'));
+
+      console.log(`🏁 [MODAL] CHECKING notification ${n.id.substring(0, 8)}:`, {
+        isRightType,
+        isUnread,
+        isRecent,
+        isRecentOrUnread,
+        notProcessed,
+        hasRideData,
+        notTestData,
+        WILL_PASS: isRightType && isRecentOrUnread && notProcessed && hasRideData && notTestData
+      });
 
       if (isRightType) {
         console.log(`🏁 [MODAL] DETAILED CHECK for notification ${n.id}:`, {
