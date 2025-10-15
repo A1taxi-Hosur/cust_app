@@ -562,6 +562,33 @@ class FareCalculator {
 
       if (error || !data) {
         console.warn(`❌ No outstation package config found for ${vehicleType}:`, error);
+        console.log('🔄 Attempting to fetch without filters to debug...');
+
+        // Debug: Try fetching without single() to see if data exists
+        const { data: allData, error: allError } = await supabase
+          .from('outstation_packages')
+          .select('*')
+          .eq('vehicle_type', vehicleType)
+          .eq('is_active', true);
+
+        console.log('🔍 Debug fetch result:', {
+          hasError: !!allError,
+          errorDetails: allError,
+          dataCount: allData?.length || 0,
+          data: allData
+        });
+
+        // If we found data with the debug query, use the first one
+        if (allData && allData.length > 0) {
+          console.log('✅ Found package config via debug query, using first result');
+          const config = allData[0];
+          this.fareConfigCache.set(cacheKey, {
+            config,
+            timestamp: Date.now(),
+          });
+          return config;
+        }
+
         return null;
       }
 
@@ -600,6 +627,33 @@ class FareCalculator {
 
       if (error || !data) {
         console.warn(`❌ No outstation per-km config found for ${vehicleType}:`, error);
+        console.log('🔄 Attempting to fetch per-km config without single() to debug...');
+
+        // Debug: Try fetching without single() to see if data exists
+        const { data: allData, error: allError } = await supabase
+          .from('outstation_fares')
+          .select('*')
+          .eq('vehicle_type', vehicleType)
+          .eq('is_active', true);
+
+        console.log('🔍 Debug per-km fetch result:', {
+          hasError: !!allError,
+          errorDetails: allError,
+          dataCount: allData?.length || 0,
+          data: allData
+        });
+
+        // If we found data with the debug query, use the first one
+        if (allData && allData.length > 0) {
+          console.log('✅ Found per-km config via debug query, using first result');
+          const config = allData[0];
+          this.fareConfigCache.set(cacheKey, {
+            config,
+            timestamp: Date.now(),
+          });
+          return config;
+        }
+
         return this.getFallbackOutstationConfig(vehicleType);
       }
 
@@ -648,8 +702,23 @@ class FareCalculator {
       console.log('🗺️ [OUTSTATION] One-way distance:', oneWayDistance.toFixed(2) + 'km');
 
       // Fetch both package config (slab) and per-km config
+      console.log('🔍 [OUTSTATION] Fetching configs for', vehicleType, '...');
       const outstationPackageConfig = await this.getOutstationPackageConfig(vehicleType);
       const outstationPerKmConfig = await this.getOutstationPerKmConfig(vehicleType);
+
+      console.log('🔍 [OUTSTATION] Config fetch results:', {
+        hasPackageConfig: !!outstationPackageConfig,
+        hasPerKmConfig: !!outstationPerKmConfig,
+        packageConfig: outstationPackageConfig ? {
+          use_slab_system: outstationPackageConfig.use_slab_system,
+          vehicle_type: outstationPackageConfig.vehicle_type,
+          has_slabs: !!(outstationPackageConfig.slab_10km)
+        } : null,
+        perKmConfig: outstationPerKmConfig ? {
+          per_km_rate: outstationPerKmConfig.per_km_rate,
+          driver_allowance: outstationPerKmConfig.driver_allowance_per_day
+        } : null
+      });
 
       if (!outstationPerKmConfig) {
         console.error('❌ [OUTSTATION] Failed to get per-km configuration');
