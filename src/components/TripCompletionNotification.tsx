@@ -18,6 +18,9 @@ const { width, height } = Dimensions.get('window');
 
 export default function TripCompletionNotification() {
   const { notifications, markAsRead } = useRideNotifications();
+
+  console.log('🎯 [TRIP_NOTIFICATION] Component mounted, notifications count:', notifications?.length || 0);
+
   const [visible, setVisible] = useState(false);
   const [notification, setNotification] = useState<any>(null);
   const [fareBreakdown, setFareBreakdown] = useState<any>(null);
