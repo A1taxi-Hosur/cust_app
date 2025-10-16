@@ -33,7 +33,9 @@ export default function TripCompletionNotification() {
   const [shownNotifications, setShownNotifications] = useState<Set<string>>(new Set());
 
   useEffect(() => {
-    console.log('🎯 [TRIP_NOTIFICATION] ===== CHECKING FOR COMPLETION NOTIFICATIONS =====');
+    console.log('🎯 [TRIP_NOTIFICATION] ===== useEffect TRIGGERED - CHECKING FOR COMPLETION NOTIFICATIONS =====');
+    console.log('🎯 [TRIP_NOTIFICATION] Notifications array length:', notifications.length);
+    console.log('🎯 [TRIP_NOTIFICATION] Notifications array reference:', notifications);
     console.log('🎯 [TRIP_NOTIFICATION] Total notifications received:', notifications.length);
     console.log('🎯 [TRIP_NOTIFICATION] Notification types:', notifications.map(n => n.type));
     console.log('🎯 [TRIP_NOTIFICATION] ride_completed count:', notifications.filter(n => n.type === 'ride_completed').length);
