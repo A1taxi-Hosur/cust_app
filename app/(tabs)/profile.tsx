@@ -209,6 +209,7 @@ export default function ProfileScreen() {
   const [showSignOutModal, setShowSignOutModal] = React.useState(false);
   const [showPrivacyPolicy, setShowPrivacyPolicy] = React.useState(false);
   const [showTermsConditions, setShowTermsConditions] = React.useState(false);
+  const [showHelpSupport, setShowHelpSupport] = React.useState(false);
 
   const handleSignOut = () => {
     console.log('🚪 Sign out button pressed');
@@ -262,11 +263,15 @@ export default function ProfileScreen() {
       title: 'Help & Support',
       subtitle: 'Get help with your account',
       onPress: () => {
-        Alert.alert(
-          'Help & Support',
-          'Call 04344 221 221 if any help is needed.',
-          [{ text: 'OK' }]
-        );
+        if (Platform.OS === 'web') {
+          setShowHelpSupport(true);
+        } else {
+          Alert.alert(
+            'Help & Support',
+            'Call 04344 221 221 if any help is needed.',
+            [{ text: 'OK' }]
+          );
+        }
       },
     },
     {
@@ -428,6 +433,28 @@ export default function ProfileScreen() {
               <ScrollView style={styles.contentScrollView} showsVerticalScrollIndicator={true}>
                 <Text style={styles.contentText}>{termsConditionsContent}</Text>
               </ScrollView>
+            </View>
+          </View>
+        </Modal>
+
+        {/* Help & Support Modal */}
+        <Modal
+          visible={showHelpSupport}
+          transparent={true}
+          animationType="fade"
+          onRequestClose={() => setShowHelpSupport(false)}
+        >
+          <View style={styles.modalOverlay}>
+            <View style={styles.modalContainer}>
+              <Text style={styles.modalTitle}>Help & Support</Text>
+              <Text style={styles.modalMessage}>Call 04344 221 221 if any help is needed.</Text>
+
+              <TouchableOpacity
+                style={[styles.modalButton, styles.confirmButton, { marginHorizontal: 0 }]}
+                onPress={() => setShowHelpSupport(false)}
+              >
+                <Text style={styles.confirmButtonText}>OK</Text>
+              </TouchableOpacity>
             </View>
           </View>
         </Modal>
