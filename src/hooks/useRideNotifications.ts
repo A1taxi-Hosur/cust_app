@@ -27,16 +27,27 @@ export function useRideNotifications() {
       
       // Subscribe to new notifications
       const subscription = realtimeService.subscribeToNotifications(user.id, (newNotification) => {
+        console.log('🔔 [useRideNotifications] ===== REALTIME NOTIFICATION RECEIVED =====');
+        console.log('🔔 [useRideNotifications] Notification:', {
+          id: newNotification.id,
+          type: newNotification.type,
+          status: newNotification.status,
+          title: newNotification.title,
+          rideId: newNotification.data?.ride_id
+        });
+
         setNotifications(prev => {
           // Check if notification already exists
           const exists = prev.find(n => n.id === newNotification.id);
           if (exists) {
+            console.log('🔔 [useRideNotifications] Notification already exists, updating');
             return prev.map(n => n.id === newNotification.id ? newNotification : n);
           }
-          
+
+          console.log('🔔 [useRideNotifications] New notification, adding to list');
           return [newNotification, ...prev];
         });
-        
+
         // Update unread count
         if (newNotification.status === 'unread') {
           setUnreadCount(prev => prev + 1);
