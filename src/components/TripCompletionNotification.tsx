@@ -9,7 +9,6 @@ import {
   Dimensions,
   ActivityIndicator,
   Modal,
-  Alert,
 } from 'react-native';
 import { CircleCheck, X, MapPin, Download, Star } from 'lucide-react-native';
 import { supabase } from '../utils/supabase';
@@ -167,7 +166,7 @@ export default function TripCompletionNotification() {
 
   const handleDownloadBill = async () => {
     if (!fareBreakdown) {
-      Alert.alert('Error', 'Fare breakdown not available');
+      console.error('📄 [TRIP_NOTIFICATION] Fare breakdown not available');
       return;
     }
 
@@ -189,11 +188,10 @@ export default function TripCompletionNotification() {
         document.body.removeChild(a);
         URL.revokeObjectURL(url);
 
-        Alert.alert('Success', 'Bill downloaded successfully!');
+        console.log('✅ [TRIP_NOTIFICATION] Bill downloaded successfully!');
       }
     } catch (error) {
-      console.error('Error downloading bill:', error);
-      Alert.alert('Error', 'Failed to download bill');
+      console.error('❌ [TRIP_NOTIFICATION] Error downloading bill:', error);
     }
   };
 
@@ -281,7 +279,7 @@ export default function TripCompletionNotification() {
       const rideId = notification?.data?.ride_id || notification?.data?.rideId;
 
       if (!driverId) {
-        Alert.alert('Error', 'Driver information not available');
+        console.error('⭐ [TRIP_NOTIFICATION] Driver information not available');
         return;
       }
 
@@ -324,7 +322,7 @@ export default function TripCompletionNotification() {
         .from('drivers')
         .select('rating, total_rides')
         .eq('id', driverId)
-        .single();
+        .maybeSingle();
 
       if (driverData) {
         const currentRating = driverData.rating || 0;
@@ -344,8 +342,7 @@ export default function TripCompletionNotification() {
       console.log('✅ [TRIP_NOTIFICATION] Rating submitted successfully');
 
     } catch (error) {
-      console.error('Error submitting rating:', error);
-      Alert.alert('Error', 'Failed to submit rating. Please try again.');
+      console.error('❌ [TRIP_NOTIFICATION] Error submitting rating:', error);
       setRating(0);
     } finally {
       setSubmittingRating(false);
@@ -380,7 +377,12 @@ export default function TripCompletionNotification() {
     });
   };
 
-  if (!visible || !notification) return null;
+  if (!visible || !notification) {
+    console.log('🔍 [TRIP_NOTIFICATION] Component render - visible:', visible, 'notification:', !!notification);
+    return null;
+  }
+
+  console.log('✅ [TRIP_NOTIFICATION] Rendering modal with notification:', notification);
 
   // Get addresses from fareBreakdown (trip completion data) first, then fallback to notification data
   const pickupAddress = fareBreakdown?.pickup_address ||
@@ -659,10 +661,12 @@ export default function TripCompletionNotification() {
           </View>
 
           {/* Rating Section */}
-          {fareBreakdown?.driver_name && (
+          {fareBreakdown?.driver_id && (
             <View style={styles.ratingSection}>
               <Text style={styles.ratingTitle}>Rate Your Driver</Text>
-              <Text style={styles.driverName}>{fareBreakdown.driver_name}</Text>
+              {fareBreakdown?.driver_name && (
+                <Text style={styles.driverName}>{fareBreakdown.driver_name}</Text>
+              )}
 
               {!ratingSubmitted ? (
                 <View style={styles.starsContainer}>
