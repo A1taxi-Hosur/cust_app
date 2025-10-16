@@ -23,13 +23,20 @@ export default function AnimatedDriverMarker({
   const scaleAnim = useRef(new Animated.Value(1)).current;
   const pulseAnim = useRef(new Animated.Value(1)).current;
   const pulseOpacity = useRef(new Animated.Value(0.3)).current;
+  const previousHeadingRef = useRef(heading);
 
   useEffect(() => {
+    // Smooth rotation animation with easing for natural movement
+    const headingDiff = Math.abs(heading - previousHeadingRef.current);
+    const duration = headingDiff > 180 ? 600 : 800; // Longer animation for smoother movement
+
     Animated.timing(rotationAnim, {
       toValue: heading,
-      duration: 300,
+      duration,
       useNativeDriver: true,
     }).start();
+
+    previousHeadingRef.current = heading;
   }, [heading]);
 
   useEffect(() => {

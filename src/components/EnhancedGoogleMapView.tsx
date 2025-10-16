@@ -52,6 +52,8 @@ const EnhancedGoogleMapView = forwardRef<MapRef, EnhancedGoogleMapViewProps>(({
   const [userLocation, setUserLocation] = useState<any>(null);
   const [routeCoordinates, setRouteCoordinates] = useState<any[]>([]);
   const [isMapReady, setIsMapReady] = useState(false);
+  const driverMarkerRef = useRef<any>(null);
+  const previousDriverLocation = useRef<any>(null);
 
   useImperativeHandle(ref, () => ({
     fitToCoordinates: (coordinates: any[], options?: any) => {
@@ -99,7 +101,19 @@ const EnhancedGoogleMapView = forwardRef<MapRef, EnhancedGoogleMapViewProps>(({
       })));
       fitMapToMarkers();
     }
-  }, [isMapReady, pickupCoords, destinationCoords, driverLocation, userLocation, availableDrivers]);
+  }, [isMapReady, pickupCoords, destinationCoords, userLocation, availableDrivers]);
+
+  // Smooth marker animation when driver location updates
+  useEffect(() => {
+    if (driverLocation && driverMarkerRef.current && previousDriverLocation.current) {
+      console.log('🚗 [MAP] Animating driver marker to new location:', driverLocation);
+
+      // Animate the marker smoothly to the new position
+      driverMarkerRef.current.animateMarkerToCoordinate(driverLocation, 1000);
+    }
+
+    previousDriverLocation.current = driverLocation;
+  }, [driverLocation]);
 
   const getCurrentUserLocation = async () => {
     try {
@@ -289,9 +303,10 @@ const EnhancedGoogleMapView = forwardRef<MapRef, EnhancedGoogleMapViewProps>(({
           </Marker>
         )}
 
-        {/* Driver Marker - 3D Isometric Car */}
+        {/* Driver Marker - 3D Isometric Car with Smooth Animation */}
         {driverLocation && (
-          <Marker
+          <Marker.Animated
+            ref={driverMarkerRef}
             coordinate={driverLocation}
             identifier="driver"
             title="Driver Location"
@@ -304,7 +319,7 @@ const EnhancedGoogleMapView = forwardRef<MapRef, EnhancedGoogleMapViewProps>(({
               heading={driverLocation.heading || 0}
               isMoving={true}
             />
-          </Marker>
+          </Marker.Animated>
         )}
 
         {/* Available Drivers Markers */}
