@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { View, Text, StyleSheet, SafeAreaView, ActivityIndicator, ScrollView, TouchableOpacity, Alert, RefreshControl } from 'react-native';
+import { View, Text, StyleSheet, SafeAreaView, ActivityIndicator, ScrollView, TouchableOpacity, Alert, RefreshControl, Linking, Platform } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { MapPin, Navigation, Phone, User, Car, Star, Clock, ArrowLeft, RefreshCw } from 'lucide-react-native';
 import { useAuth } from '../../src/contexts/AuthContext';
@@ -679,7 +679,7 @@ export default function RidesScreen() {
                 </View>
                 <TouchableOpacity
                   style={styles.callButton}
-                  onPress={() => {
+                  onPress={async () => {
                     const phoneNumber = ride.drivers?.users?.phone_number || ride.assigned_driver?.users?.phone_number;
                     console.log('📞 [PHONE] Driver data:', {
                       drivers: ride.drivers,
@@ -696,20 +696,48 @@ export default function RidesScreen() {
                       return;
                     }
 
-                    Alert.alert(
-                      'Driver Contact',
-                      `Phone: ${phoneNumber}`,
-                      [
-                        { text: 'Cancel', style: 'cancel' },
-                        {
-                          text: 'Call',
-                          onPress: () => {
-                            // In web, show copy option. In mobile, this would open dialer
-                            Alert.alert('Call Driver', `Calling ${phoneNumber}...`);
+                    // Format phone number for tel: URI
+                    const telUri = `tel:${phoneNumber}`;
+
+                    if (Platform.OS === 'web') {
+                      // On web, show phone number with options to copy
+                      Alert.alert(
+                        'Driver Contact',
+                        `Phone: ${phoneNumber}`,
+                        [
+                          { text: 'Close', style: 'cancel' },
+                          {
+                            text: 'Call',
+                            onPress: () => {
+                              // Try to open tel: link (works in some browsers)
+                              window.location.href = telUri;
+                            }
                           }
-                        }
-                      ]
-                    );
+                        ]
+                      );
+                    } else {
+                      // On mobile, directly initiate call
+                      const canOpen = await Linking.canOpenURL(telUri);
+                      if (canOpen) {
+                        Alert.alert(
+                          'Call Driver',
+                          `Call ${phoneNumber}?`,
+                          [
+                            { text: 'Cancel', style: 'cancel' },
+                            {
+                              text: 'Call',
+                              onPress: () => Linking.openURL(telUri)
+                            }
+                          ]
+                        );
+                      } else {
+                        Alert.alert(
+                          'Driver Contact',
+                          `Phone: ${phoneNumber}`,
+                          [{ text: 'OK', style: 'default' }]
+                        );
+                      }
+                    }
                   }}
                 >
                   <Phone size={16} color="#FFFFFF" />
