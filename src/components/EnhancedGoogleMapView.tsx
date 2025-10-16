@@ -57,6 +57,20 @@ const EnhancedGoogleMapView = forwardRef<MapRef, EnhancedGoogleMapViewProps>(({
   const driverMarkerRef = useRef<any>(null);
   const previousDriverLocation = useRef<any>(null);
 
+  // Debug props when they change
+  useEffect(() => {
+    console.log('🗺️ [MAP] Props updated:', {
+      showRoute,
+      showDriverToPickupRoute,
+      hasDriverLocation: !!driverLocation,
+      hasPickupCoords: !!pickupCoords,
+      hasDestinationCoords: !!destinationCoords,
+      driverLocation: driverLocation ? { lat: driverLocation.latitude, lng: driverLocation.longitude } : null,
+      pickupCoords: pickupCoords ? { lat: pickupCoords.latitude, lng: pickupCoords.longitude } : null,
+      destinationCoords: destinationCoords ? { lat: destinationCoords.latitude, lng: destinationCoords.longitude } : null,
+    });
+  }, [showRoute, showDriverToPickupRoute, driverLocation, pickupCoords, destinationCoords]);
+
   useImperativeHandle(ref, () => ({
     fitToCoordinates: (coordinates: any[], options?: any) => {
       if (mapRef.current && isMapReady) {
@@ -379,36 +393,70 @@ const EnhancedGoogleMapView = forwardRef<MapRef, EnhancedGoogleMapViewProps>(({
         {availableDrivers && availableDrivers.length > 0 && console.log('🗺️ [MAP] Total driver markers rendered:', availableDrivers.length)}
 
         {/* Route using MapViewDirections for better accuracy */}
-        {showRoute && pickupCoords && destinationCoords && isMapReady && GOOGLE_MAPS_API_KEY && (
-          <MapViewDirections
-            origin={pickupCoords}
-            destination={destinationCoords}
-            apikey={GOOGLE_MAPS_API_KEY}
-            strokeWidth={4}
-            strokeColor="#2563EB"
-            optimizeWaypoints={true}
-            precision="high"
-            timePrecision="now"
-            onReady={(result) => {
-              console.log('Route ready:', {
-                distance: result.distance,
-                duration: result.duration,
-              });
-              
-              // Clear fallback route when real route is ready
-              setRouteCoordinates([]);
-              
-              onRouteReady?.({
-                distance: result.distance,
-                duration: result.duration,
-              });
-            }}
-            onError={(errorMessage) => {
-              console.error('Route error:', errorMessage);
-              // Set fallback straight line route
-              setRouteCoordinates([pickupCoords, destinationCoords]);
-            }}
-          />
+        {showRoute && isMapReady && GOOGLE_MAPS_API_KEY && (
+          <>
+            {/* Driver to Pickup Route */}
+            {showDriverToPickupRoute && driverLocation && pickupCoords && (
+              <MapViewDirections
+                origin={driverLocation}
+                destination={pickupCoords}
+                apikey={GOOGLE_MAPS_API_KEY}
+                strokeWidth={4}
+                strokeColor="#2563EB"
+                optimizeWaypoints={true}
+                precision="high"
+                timePrecision="now"
+                onReady={(result) => {
+                  console.log('🗺️ [MAP] Driver → Pickup route ready:', {
+                    distance: result.distance,
+                    duration: result.duration,
+                  });
+
+                  setRouteCoordinates([]);
+
+                  onRouteReady?.({
+                    distance: result.distance,
+                    duration: result.duration,
+                  });
+                }}
+                onError={(errorMessage) => {
+                  console.error('🗺️ [MAP] Driver → Pickup route error:', errorMessage);
+                  setRouteCoordinates([driverLocation, pickupCoords]);
+                }}
+              />
+            )}
+
+            {/* Pickup to Destination Route */}
+            {!showDriverToPickupRoute && pickupCoords && destinationCoords && (
+              <MapViewDirections
+                origin={pickupCoords}
+                destination={destinationCoords}
+                apikey={GOOGLE_MAPS_API_KEY}
+                strokeWidth={4}
+                strokeColor="#2563EB"
+                optimizeWaypoints={true}
+                precision="high"
+                timePrecision="now"
+                onReady={(result) => {
+                  console.log('🗺️ [MAP] Pickup → Destination route ready:', {
+                    distance: result.distance,
+                    duration: result.duration,
+                  });
+
+                  setRouteCoordinates([]);
+
+                  onRouteReady?.({
+                    distance: result.distance,
+                    duration: result.duration,
+                  });
+                }}
+                onError={(errorMessage) => {
+                  console.error('🗺️ [MAP] Pickup → Destination route error:', errorMessage);
+                  setRouteCoordinates([pickupCoords, destinationCoords]);
+                }}
+              />
+            )}
+          </>
         )}
 
         {/* Fallback route polyline if MapViewDirections fails */}

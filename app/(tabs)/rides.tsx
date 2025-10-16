@@ -30,13 +30,31 @@ export default function RidesScreen() {
   const [trackingError, setTrackingError] = useState<string | null>(null);
   const [lastUpdate, setLastUpdate] = useState<Date | null>(null);
 
+  // Get the correct driver_id based on ride type
+  const driverId = selectedRide?.driver_id || selectedRide?.assigned_driver_id || null;
+
+  useEffect(() => {
+    if (selectedRide) {
+      console.log('🔍 [RIDES] Selected ride details:', {
+        id: selectedRide.id,
+        status: selectedRide.status,
+        driver_id: selectedRide.driver_id,
+        assigned_driver_id: selectedRide.assigned_driver_id,
+        isScheduledBooking: selectedRide.isScheduledBooking,
+        pickup: { lat: selectedRide.pickup_latitude, lng: selectedRide.pickup_longitude },
+        destination: { lat: selectedRide.destination_latitude, lng: selectedRide.destination_longitude },
+      });
+      console.log('🔍 [RIDES] Using driver_id for tracking:', driverId);
+    }
+  }, [selectedRide?.id]);
+
   const {
     driverLocation: autoDriverLocation,
     isTracking: autoIsTracking,
     error: autoTrackingError,
   } = useDriverLocationTracking(
     selectedRide?.id || null,
-    selectedRide?.driver_id || null
+    driverId
   );
 
   useEffect(() => {
