@@ -5,6 +5,9 @@ import {
   StyleSheet,
   TouchableOpacity,
   ActivityIndicator,
+  Linking,
+  Platform,
+  Alert,
 } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { Clock, MapPin, Navigation, Car, User, Phone, Star, CircleCheck as CheckCircle, CircleAlert as AlertCircle } from 'lucide-react-native';
@@ -117,6 +120,33 @@ export default function RideStatusCard({ ride, onStatusChange }: RideStatusCardP
   const statusInfo = getStatusInfo();
   const StatusIcon = statusInfo.icon;
 
+  const handleCallDriver = async () => {
+    const phoneNumber = ride.drivers?.users?.phone_number;
+
+    if (!phoneNumber) {
+      Alert.alert('Error', 'Driver phone number not available');
+      return;
+    }
+
+    const phoneUrl = Platform.select({
+      ios: `telprompt:${phoneNumber}`,
+      android: `tel:${phoneNumber}`,
+      default: `tel:${phoneNumber}`,
+    });
+
+    try {
+      const canOpen = await Linking.canOpenURL(phoneUrl);
+      if (canOpen) {
+        await Linking.openURL(phoneUrl);
+      } else {
+        Alert.alert('Error', 'Unable to make phone call');
+      }
+    } catch (error) {
+      console.error('Error making phone call:', error);
+      Alert.alert('Error', 'Failed to initiate call');
+    }
+  };
+
   return (
     <View style={styles.container}>
       <LinearGradient
@@ -172,8 +202,12 @@ export default function RideStatusCard({ ride, onStatusChange }: RideStatusCardP
                 </View>
               </View>
               
-              {ride.drivers.users.phone && (
-                <TouchableOpacity style={styles.callButton}>
+              {ride.drivers.users.phone_number && (
+                <TouchableOpacity
+                  style={styles.callButton}
+                  onPress={handleCallDriver}
+                  activeOpacity={0.7}
+                >
                   <Phone size={18} color="#FFFFFF" />
                 </TouchableOpacity>
               )}
