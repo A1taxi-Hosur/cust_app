@@ -758,20 +758,12 @@ export default function RidesScreen() {
                   {ride.isScheduledBooking ? 'Scheduled for' : 'Booked at'} {formatTime(ride.scheduled_time || ride.created_at)}
                 </Text>
               </View>
-              
+
               <View style={styles.tripDetailItem}>
                 <Text style={styles.fareLabel}>Fare: </Text>
                 <Text style={styles.fareAmount}>₹{ride.fare_amount}</Text>
               </View>
 
-              <View style={styles.tripDetailItem}>
-                <Text style={styles.bookingTypeLabel}>Type: </Text>
-                <Text style={styles.bookingTypeText}>
-                  {ride.booking_type.charAt(0).toUpperCase() + ride.booking_type.slice(1)}
-                  {ride.rental_hours ? ` (${ride.rental_hours}h)` : ''}
-                </Text>
-              </View>
-              
               {ride.special_instructions && (
                 <View style={styles.tripDetailItem}>
                   <Text style={styles.instructionsLabel}>Instructions: </Text>
@@ -1186,9 +1178,10 @@ const styles = StyleSheet.create({
   },
   sectionTitle: {
     fontSize: 18,
-    fontWeight: 'bold',
+    fontWeight: '700',
     color: '#1F2937',
-    marginBottom: 12,
+    marginBottom: 16,
+    letterSpacing: -0.3,
   },
   driverCard: {
     backgroundColor: '#F9FAFB',
@@ -1288,12 +1281,12 @@ const styles = StyleSheet.create({
     padding: 20,
   },
   locationContainer: {
-    marginBottom: 16,
+    marginBottom: 20,
+    gap: 16,
   },
   locationItem: {
     flexDirection: 'row',
     alignItems: 'flex-start',
-    marginBottom: 12,
   },
   locationDetails: {
     marginLeft: 12,
@@ -1303,52 +1296,50 @@ const styles = StyleSheet.create({
     fontSize: 12,
     color: '#6B7280',
     fontWeight: '600',
-    marginBottom: 2,
+    marginBottom: 4,
+    textTransform: 'uppercase',
+    letterSpacing: 0.5,
   },
   locationText: {
     fontSize: 14,
     color: '#374151',
+    lineHeight: 20,
   },
   tripDetails: {
     backgroundColor: '#FFFFFF',
     borderRadius: 12,
     padding: 16,
+    gap: 12,
   },
   tripDetailItem: {
     flexDirection: 'row',
     alignItems: 'center',
-    marginBottom: 8,
   },
   tripDetailText: {
-    fontSize: 12,
+    fontSize: 13,
     color: '#374151',
     marginLeft: 8,
+    flex: 1,
   },
   fareLabel: {
     fontSize: 14,
     color: '#6B7280',
+    fontWeight: '500',
   },
   fareAmount: {
     fontSize: 16,
     fontWeight: 'bold',
     color: '#059669',
   },
-  bookingTypeLabel: {
-    fontSize: 12,
-    color: '#6B7280',
-  },
-  bookingTypeText: {
-    fontSize: 12,
-    fontWeight: '600',
-    color: '#374151',
-  },
   instructionsLabel: {
-    fontSize: 12,
+    fontSize: 13,
     color: '#6B7280',
+    fontWeight: '500',
+    marginRight: 6,
   },
   instructionsText: {
-    fontSize: 12,
-    fontWeight: '600',
+    fontSize: 13,
+    fontWeight: '500',
     color: '#374151',
     flex: 1,
   },
