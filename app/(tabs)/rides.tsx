@@ -14,6 +14,7 @@ import { useRouter } from 'expo-router';
 import { CircleCheck as CheckCircle, CircleAlert as AlertCircle } from 'lucide-react-native';
 import { supabase } from '../../src/utils/supabase';
 import { notificationService } from '../../src/services/notificationService';
+import CustomAlert from '../../src/components/CustomAlert';
 
 export default function RidesScreen() {
   const { user } = useAuth();
@@ -29,6 +30,10 @@ export default function RidesScreen() {
   const [isTracking, setIsTracking] = useState(false);
   const [trackingError, setTrackingError] = useState<string | null>(null);
   const [lastUpdate, setLastUpdate] = useState<Date | null>(null);
+
+  // Phone alert state
+  const [showPhoneAlert, setShowPhoneAlert] = useState(false);
+  const [phoneAlertData, setPhoneAlertData] = useState({ phoneNumber: '', title: '', message: '' });
 
   // Get the correct driver_id based on ride type
   const driverId = selectedRide?.driver_id || selectedRide?.assigned_driver_id || null;
@@ -679,65 +684,26 @@ export default function RidesScreen() {
                 </View>
                 <TouchableOpacity
                   style={styles.callButton}
-                  onPress={async () => {
+                  onPress={() => {
                     const phoneNumber = ride.drivers?.users?.phone_number || ride.assigned_driver?.users?.phone_number;
-                    console.log('📞 [PHONE] Driver data:', {
-                      drivers: ride.drivers,
-                      assigned_driver: ride.assigned_driver,
-                      phoneNumber
-                    });
+                    console.log('📞 [PHONE] Button clicked - Phone number:', phoneNumber);
 
                     if (!phoneNumber) {
-                      Alert.alert(
-                        'Phone Number Unavailable',
-                        'Driver phone number is not available at this time.',
-                        [{ text: 'OK', style: 'cancel' }]
-                      );
+                      setPhoneAlertData({
+                        phoneNumber: '',
+                        title: 'Phone Number Unavailable',
+                        message: 'Driver phone number is not available at this time.'
+                      });
+                      setShowPhoneAlert(true);
                       return;
                     }
 
-                    // Format phone number for tel: URI
-                    const telUri = `tel:${phoneNumber}`;
-
-                    if (Platform.OS === 'web') {
-                      // On web, show phone number with options to copy
-                      Alert.alert(
-                        'Driver Contact',
-                        `Phone: ${phoneNumber}`,
-                        [
-                          { text: 'Close', style: 'cancel' },
-                          {
-                            text: 'Call',
-                            onPress: () => {
-                              // Try to open tel: link (works in some browsers)
-                              window.location.href = telUri;
-                            }
-                          }
-                        ]
-                      );
-                    } else {
-                      // On mobile, directly initiate call
-                      const canOpen = await Linking.canOpenURL(telUri);
-                      if (canOpen) {
-                        Alert.alert(
-                          'Call Driver',
-                          `Call ${phoneNumber}?`,
-                          [
-                            { text: 'Cancel', style: 'cancel' },
-                            {
-                              text: 'Call',
-                              onPress: () => Linking.openURL(telUri)
-                            }
-                          ]
-                        );
-                      } else {
-                        Alert.alert(
-                          'Driver Contact',
-                          `Phone: ${phoneNumber}`,
-                          [{ text: 'OK', style: 'default' }]
-                        );
-                      }
-                    }
+                    setPhoneAlertData({
+                      phoneNumber,
+                      title: 'Driver Contact',
+                      message: `Phone: ${phoneNumber}`
+                    });
+                    setShowPhoneAlert(true);
                   }}
                 >
                   <Phone size={16} color="#FFFFFF" />
@@ -1053,6 +1019,35 @@ export default function RidesScreen() {
             </View>
           </View>
         )}
+
+        {/* Phone Alert */}
+        <CustomAlert
+          visible={showPhoneAlert}
+          title={phoneAlertData.title}
+          message={phoneAlertData.message}
+          type="info"
+          buttons={[
+            {
+              text: 'Close',
+              style: 'cancel',
+              onPress: () => setShowPhoneAlert(false)
+            },
+            ...(phoneAlertData.phoneNumber ? [{
+              text: 'Call',
+              style: 'default' as const,
+              onPress: () => {
+                setShowPhoneAlert(false);
+                const telUri = `tel:${phoneAlertData.phoneNumber}`;
+                if (Platform.OS === 'web') {
+                  window.location.href = telUri;
+                } else {
+                  Linking.openURL(telUri);
+                }
+              }
+            }] : [])
+          ]}
+          onRequestClose={() => setShowPhoneAlert(false)}
+        />
       </LinearGradient>
     </SafeAreaView>
   );
