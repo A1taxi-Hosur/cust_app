@@ -17,6 +17,7 @@ interface EnhancedGoogleMapViewProps {
   driverLocation?: { latitude: number; longitude: number; heading?: number; speed?: number };
   availableDrivers?: AvailableDriver[];
   showRoute?: boolean;
+  showDriverToPickupRoute?: boolean;
   onMapPress?: (coordinate: { latitude: number; longitude: number }) => void;
   onRouteReady?: (result: { distance: number; duration: number }) => void;
   style?: any;
@@ -37,6 +38,7 @@ const EnhancedGoogleMapView = forwardRef<MapRef, EnhancedGoogleMapViewProps>(({
   driverLocation,
   availableDrivers = [],
   showRoute = false,
+  showDriverToPickupRoute = false,
   onMapPress,
   onRouteReady,
   style,
@@ -52,6 +54,20 @@ const EnhancedGoogleMapView = forwardRef<MapRef, EnhancedGoogleMapViewProps>(({
   const [isMapReady, setIsMapReady] = useState(false);
   const [userLocation, setUserLocation] = useState<any>(null);
   const [isGoogleMapsLoaded, setIsGoogleMapsLoaded] = useState(false);
+
+  // Debug props when they change
+  useEffect(() => {
+    console.log('🗺️ [WEB-MAP] Props updated:', {
+      showRoute,
+      showDriverToPickupRoute,
+      hasDriverLocation: !!driverLocation,
+      hasPickupCoords: !!pickupCoords,
+      hasDestinationCoords: !!destinationCoords,
+      driverLocation: driverLocation ? { lat: driverLocation.latitude, lng: driverLocation.longitude } : null,
+      pickupCoords: pickupCoords ? { lat: pickupCoords.latitude, lng: pickupCoords.longitude } : null,
+      destinationCoords: destinationCoords ? { lat: destinationCoords.latitude, lng: destinationCoords.longitude } : null,
+    });
+  }, [showRoute, showDriverToPickupRoute, driverLocation, pickupCoords, destinationCoords]);
 
   useImperativeHandle(ref, () => ({
     fitToCoordinates: (coordinates: any[], options?: any) => {
@@ -124,10 +140,16 @@ const EnhancedGoogleMapView = forwardRef<MapRef, EnhancedGoogleMapViewProps>(({
   }, [isMapReady, driverLocation]);
 
   useEffect(() => {
-    if (isMapReady && showRoute && pickupCoords && destinationCoords) {
-      calculateAndDisplayRoute();
+    if (isMapReady && showRoute) {
+      if (showDriverToPickupRoute && driverLocation && pickupCoords) {
+        console.log('🗺️ [WEB-MAP] Calculating driver → pickup route');
+        calculateAndDisplayRoute(driverLocation, pickupCoords);
+      } else if (!showDriverToPickupRoute && pickupCoords && destinationCoords) {
+        console.log('🗺️ [WEB-MAP] Calculating pickup → destination route');
+        calculateAndDisplayRoute(pickupCoords, destinationCoords);
+      }
     }
-  }, [isMapReady, showRoute, pickupCoords, destinationCoords]);
+  }, [isMapReady, showRoute, showDriverToPickupRoute, driverLocation, pickupCoords, destinationCoords]);
 
   const loadGoogleMapsScript = () => {
     if (window.google && window.google.maps) {
@@ -413,25 +435,28 @@ const EnhancedGoogleMapView = forwardRef<MapRef, EnhancedGoogleMapViewProps>(({
     }
   };
 
-  const calculateAndDisplayRoute = async () => {
-    if (!pickupCoords || !destinationCoords || !directionsRenderer.current) return;
+  const calculateAndDisplayRoute = async (
+    origin: { latitude: number; longitude: number },
+    destination: { latitude: number; longitude: number }
+  ) => {
+    if (!origin || !destination || !directionsRenderer.current) return;
 
     try {
-      console.log('🗺️ Drawing route on web map between:', pickupCoords, 'and', destinationCoords);
-      
+      console.log('🗺️ [WEB-MAP] Drawing route between:', origin, 'and', destination);
+
       // Skip route calculation if no valid API key
       if (!GOOGLE_MAPS_API_KEY || GOOGLE_MAPS_API_KEY.includes('placeholder')) {
         console.warn('⚠️ No valid Google Maps API key, using fallback route');
-        drawFallbackRoute();
+        drawFallbackRoute(origin, destination);
         return;
       }
 
       // Use direct Google Directions Service with error handling
       const directionsService = new google.maps.DirectionsService();
-      
+
       const request = {
-        origin: { lat: pickupCoords.latitude, lng: pickupCoords.longitude },
-        destination: { lat: destinationCoords.latitude, lng: destinationCoords.longitude },
+        origin: { lat: origin.latitude, lng: origin.longitude },
+        destination: { lat: destination.latitude, lng: destination.longitude },
         travelMode: google.maps.TravelMode.DRIVING,
       };
       
@@ -452,29 +477,32 @@ const EnhancedGoogleMapView = forwardRef<MapRef, EnhancedGoogleMapViewProps>(({
             console.log('✅ Route drawn successfully on web map');
           } else {
             console.warn('⚠️ Directions service failed with status:', status, '- using fallback route');
-            drawFallbackRoute();
+            drawFallbackRoute(origin, destination);
           }
         } catch (directionsError) {
           console.error('❌ Error processing directions result:', directionsError);
-          drawFallbackRoute();
+          drawFallbackRoute(origin, destination);
         }
       });
     } catch (error) {
       console.error('Error calculating route for web:', error);
-      drawFallbackRoute();
+      drawFallbackRoute(origin, destination);
     }
   };
 
-  const drawFallbackRoute = () => {
-    if (!googleMapRef.current || !pickupCoords || !destinationCoords) return;
-    
-    console.log('🗺️ Drawing fallback straight line route');
-    
+  const drawFallbackRoute = (
+    origin: { latitude: number; longitude: number },
+    destination: { latitude: number; longitude: number }
+  ) => {
+    if (!googleMapRef.current || !origin || !destination) return;
+
+    console.log('🗺️ [WEB-MAP] Drawing fallback straight line route');
+
     // Draw a simple polyline as fallback
     const routePath = new google.maps.Polyline({
       path: [
-        { lat: pickupCoords.latitude, lng: pickupCoords.longitude },
-        { lat: destinationCoords.latitude, lng: destinationCoords.longitude },
+        { lat: origin.latitude, lng: origin.longitude },
+        { lat: destination.latitude, lng: destination.longitude },
       ],
       geodesic: true,
       strokeColor: '#2563EB',

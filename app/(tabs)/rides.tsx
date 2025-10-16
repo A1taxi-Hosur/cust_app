@@ -575,6 +575,14 @@ export default function RidesScreen() {
             <View style={styles.mapContainer}>
               {driverLocation ? (
                 <>
+                  {console.log('🗺️ [RIDES] Rendering map with data:', {
+                    rideId: ride.id,
+                    rideStatus: ride.status,
+                    showDriverToPickupRoute: ride.status === 'accepted' || ride.status === 'driver_arrived',
+                    driverLocation: { lat: driverLocation.latitude, lng: driverLocation.longitude },
+                    pickupLocation: { lat: ride.pickup_latitude, lng: ride.pickup_longitude },
+                    destinationLocation: ride.destination_latitude ? { lat: ride.destination_latitude, lng: ride.destination_longitude } : null,
+                  })}
                   <EnhancedGoogleMapView
                     initialRegion={{
                       latitude: ride.pickup_latitude || 12.9716,
