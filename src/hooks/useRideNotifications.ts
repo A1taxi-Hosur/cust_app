@@ -23,8 +23,9 @@ export function useRideNotifications() {
 
   useEffect(() => {
     if (user) {
+      console.log('🎯 [useRideNotifications] useEffect triggered, user ID:', user.id);
       fetchNotifications();
-      
+
       // Subscribe to new notifications
       const subscription = realtimeService.subscribeToNotifications(user.id, (newNotification) => {
         console.log('🔔 [useRideNotifications] ===== REALTIME NOTIFICATION RECEIVED =====');
