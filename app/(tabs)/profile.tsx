@@ -261,7 +261,13 @@ export default function ProfileScreen() {
       icon: HelpCircle,
       title: 'Help & Support',
       subtitle: 'Get help with your account',
-      onPress: () => {},
+      onPress: () => {
+        Alert.alert(
+          'Help & Support',
+          'Call 04344 221 221 if any help is needed.',
+          [{ text: 'OK' }]
+        );
+      },
     },
     {
       icon: LogOut,
