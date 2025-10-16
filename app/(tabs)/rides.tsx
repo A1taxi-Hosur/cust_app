@@ -542,7 +542,8 @@ export default function RidesScreen() {
         )}
 
         {/* Live Tracking Map - Show for accepted, driver_arrived, and in_progress rides */}
-        {(ride.drivers || ride.assigned_driver) && ['accepted', 'driver_arrived', 'in_progress', 'picked_up'].includes(ride.status) && (
+        {/* Hide map and live tracking for scheduled bookings (airport, rental, outstation) */}
+        {!ride.isScheduledBooking && (ride.drivers || ride.assigned_driver) && ['accepted', 'driver_arrived', 'in_progress', 'picked_up'].includes(ride.status) && (
           <View style={styles.mapSection}>
             <Text style={styles.sectionTitle}>
               {ride.status === 'in_progress' || ride.status === 'picked_up' ? '🚗 En Route to Destination' : '📍 Driver Location'}
