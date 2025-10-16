@@ -43,14 +43,14 @@ export default function LoginScreen() {
       return;
     }
 
-    const formattedPhone = phoneNumber.startsWith('+') ? phoneNumber : `+${phoneNumber}`;
-    console.log('📱 Formatted phone:', formattedPhone);
-
-    if (formattedPhone.length < 10) {
-      console.log('❌ Phone number too short');
-      Alert.alert('Error', 'Please enter a valid phone number');
+    if (phoneNumber.length !== 10) {
+      console.log('❌ Phone number must be 10 digits');
+      Alert.alert('Error', 'Please enter a valid 10-digit phone number');
       return;
     }
+
+    const formattedPhone = `+91${phoneNumber}`;
+    console.log('📱 Formatted phone:', formattedPhone);
 
     console.log('⏳ Setting loading true...');
     setLoading(true);
@@ -163,16 +163,27 @@ export default function LoginScreen() {
 
               <View style={styles.inputContainer}>
                 <Text style={styles.inputLabel}>Phone Number</Text>
-                <TextInput
-                  style={styles.input}
-                  value={phoneNumber}
-                  onChangeText={(text) => setPhoneNumber(formatPhoneNumber(text))}
-                  placeholder="Enter phone number with country code"
-                  placeholderTextColor="#9CA3AF"
-                  keyboardType="phone-pad"
-                  autoComplete="tel"
-                />
-                <Text style={styles.helperText}>Include country code (e.g., +1234567890)</Text>
+                <View style={styles.phoneInputContainer}>
+                  <View style={styles.countryCodeContainer}>
+                    <Text style={styles.countryCodeText}>+91</Text>
+                  </View>
+                  <TextInput
+                    style={styles.phoneInput}
+                    value={phoneNumber}
+                    onChangeText={(text) => {
+                      const cleaned = formatPhoneNumber(text);
+                      if (cleaned.length <= 10) {
+                        setPhoneNumber(cleaned);
+                      }
+                    }}
+                    placeholder="Enter 10-digit phone number"
+                    placeholderTextColor="#9CA3AF"
+                    keyboardType="phone-pad"
+                    autoComplete="tel"
+                    maxLength={10}
+                  />
+                </View>
+                <Text style={styles.helperText}>Indian phone number (10 digits)</Text>
               </View>
 
               <TouchableOpacity
@@ -256,6 +267,31 @@ const styles = StyleSheet.create({
   input: {
     backgroundColor: 'rgba(255, 255, 255, 0.9)',
     borderRadius: 12,
+    padding: 16,
+    fontSize: 16,
+    color: '#1F2937',
+  },
+  phoneInputContainer: {
+    flexDirection: 'row',
+    backgroundColor: 'rgba(255, 255, 255, 0.9)',
+    borderRadius: 12,
+    overflow: 'hidden',
+  },
+  countryCodeContainer: {
+    backgroundColor: '#E5E7EB',
+    paddingHorizontal: 16,
+    justifyContent: 'center',
+    alignItems: 'center',
+    borderRightWidth: 1,
+    borderRightColor: '#D1D5DB',
+  },
+  countryCodeText: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: '#1F2937',
+  },
+  phoneInput: {
+    flex: 1,
     padding: 16,
     fontSize: 16,
     color: '#1F2937',
