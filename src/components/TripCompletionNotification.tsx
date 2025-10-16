@@ -54,39 +54,49 @@ export default function TripCompletionNotification() {
         id: tripCompletedNotifications[0].id,
         type: tripCompletedNotifications[0].type,
         status: tripCompletedNotifications[0].status,
-        alreadyShown: shownNotifications.has(tripCompletedNotifications[0].id)
+        alreadyShown: shownNotifications.has(tripCompletedNotifications[0].id),
+        currentNotificationId: notification?.id
       });
     }
 
-    if (tripCompletedNotifications.length > 0 && !visible) {
+    // Show new notification if it's different from the currently displayed one
+    if (tripCompletedNotifications.length > 0) {
       const latest = tripCompletedNotifications[0];
-      console.log('🎉 [TRIP_NOTIFICATION] Showing trip completion:', latest);
-      setNotification(latest);
-      setShownNotifications(prev => new Set([...prev, latest.id]));
+      const isNewNotification = !notification || notification.id !== latest.id;
 
-      // Fetch fare breakdown - try to get ride_id or booking_id
-      const rideId = latest.data?.ride_id || latest.data?.rideId || latest.data?.booking_id || latest.data?.bookingId;
-      if (rideId) {
-        fetchFareBreakdown(rideId);
+      if (isNewNotification) {
+        console.log('🎉 [TRIP_NOTIFICATION] Showing NEW trip completion:', {
+          notificationId: latest.id,
+          rideId: latest.data?.ride_id,
+          previousNotificationId: notification?.id
+        });
+        setNotification(latest);
+        setShownNotifications(prev => new Set([...prev, latest.id]));
+
+        // Fetch fare breakdown - try to get ride_id or booking_id
+        const rideId = latest.data?.ride_id || latest.data?.rideId || latest.data?.booking_id || latest.data?.bookingId;
+        if (rideId) {
+          fetchFareBreakdown(rideId);
+        }
+
+        // Show notification with fade in animation
+        setVisible(true);
+        Animated.parallel([
+          Animated.timing(fadeAnim, {
+            toValue: 1,
+            duration: 300,
+            useNativeDriver: true,
+          }),
+          Animated.spring(scaleAnim, {
+            toValue: 1,
+            tension: 50,
+            friction: 7,
+            useNativeDriver: true,
+          }),
+        ]).start();
       }
-
-      // Show notification with fade in animation
-      setVisible(true);
-      Animated.parallel([
-        Animated.timing(fadeAnim, {
-          toValue: 1,
-          duration: 300,
-          useNativeDriver: true,
-        }),
-        Animated.spring(scaleAnim, {
-          toValue: 1,
-          tension: 50,
-          friction: 7,
-          useNativeDriver: true,
-        }),
-      ]).start();
     }
-  }, [notifications, visible]);
+  }, [notifications, notification]);
 
   const fetchFareBreakdown = async (rideOrBookingId: string) => {
     if (!rideOrBookingId) return;
