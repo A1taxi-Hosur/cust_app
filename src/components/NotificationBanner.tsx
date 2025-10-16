@@ -40,15 +40,16 @@ export default function NotificationBanner() {
         return false;
       }
       
-      // NEVER show trip completion notifications in banner - they should only show in full-screen modal
-      if (n.type === 'trip_completed') {
-        console.log('🚫 [BANNER_DEBUG] ===== BLOCKING TRIP COMPLETION FROM BANNER =====');
-        console.log('🚫 [BANNER_DEBUG] Trip completion notification blocked from banner:', {
+      // NEVER show trip/ride/booking completion notifications in banner - they should only show in full-screen modal
+      if (n.type === 'trip_completed' || n.type === 'ride_completed' || n.type === 'booking_completed') {
+        console.log('🚫 [BANNER_DEBUG] ===== BLOCKING COMPLETION NOTIFICATION FROM BANNER =====');
+        console.log('🚫 [BANNER_DEBUG] Completion notification blocked from banner:', {
           id: n.id,
+          type: n.type,
           title: n.title,
-          rideId: n.data?.rideId,
-          bookingId: n.data?.bookingId,
-          fareAmount: n.data?.fareAmount,
+          rideId: n.data?.rideId || n.data?.ride_id,
+          bookingId: n.data?.bookingId || n.data?.booking_id,
+          fareAmount: n.data?.fareAmount || n.data?.fare_amount,
           reason: 'Should show in full-screen modal only'
         });
         return false;
