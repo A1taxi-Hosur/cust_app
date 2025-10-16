@@ -413,8 +413,19 @@ const EnhancedGoogleMapView = forwardRef<MapRef, EnhancedGoogleMapViewProps>(({
     // Driver marker is handled separately in updateDriverMarker to enable smooth animation
 
     // Add available drivers markers
+    console.log('🚗 [WEB-MAP] ===== ADDING AVAILABLE DRIVER MARKERS =====');
+    console.log('🚗 [WEB-MAP] Available drivers count:', availableDrivers?.length || 0);
+
     if (availableDrivers && availableDrivers.length > 0) {
+      console.log('🚗 [WEB-MAP] Drivers to render:', availableDrivers.map(d => ({
+        driver_id: d.driver_id,
+        vehicle_type: d.vehicle_type,
+        coordinates: { lat: d.latitude, lng: d.longitude }
+      })));
+
       availableDrivers.forEach((driver, index) => {
+        console.log(`🚗 [WEB-MAP] Creating marker ${index + 1}/${availableDrivers.length} for driver ${driver.driver_id}`);
+
         const availableDriverMarker = new google.maps.Marker({
           position: { lat: driver.latitude, lng: driver.longitude },
           map: googleMapRef.current,
@@ -431,7 +442,12 @@ const EnhancedGoogleMapView = forwardRef<MapRef, EnhancedGoogleMapViewProps>(({
           },
         });
         markersRef.current.push(availableDriverMarker);
+        console.log(`✅ [WEB-MAP] Marker ${index + 1} created successfully`);
       });
+
+      console.log('✅ [WEB-MAP] All driver markers created. Total markers on map:', markersRef.current.length);
+    } else {
+      console.log('⚠️ [WEB-MAP] No available drivers to render');
     }
   };
 

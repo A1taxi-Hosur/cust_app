@@ -179,13 +179,13 @@ class DriverLocationService {
         radius: radius + 'km',
         vehicleType: vehicleType || 'all'
       });
-      
-      // Import supabaseAdmin for direct access
-      const { supabaseAdmin } = await import('../utils/supabase');
+
+      // Import supabase client (now has RLS policies allowing customers to read driver locations)
+      const { supabase } = await import('../utils/supabase');
       
       // Step 1: Get all online and verified drivers
       console.log('📊 [DRIVER-SERVICE] Step 1: Fetching online verified drivers...');
-      const { data: drivers, error: driversError } = await supabaseAdmin
+      const { data: drivers, error: driversError } = await supabase
         .from('drivers')
         .select(`
           id,
@@ -236,7 +236,7 @@ class DriverLocationService {
       const driverUserIds = drivers.map(d => d.user_id);
       console.log('📍 [DRIVER-SERVICE] Step 2: Getting locations for user IDs:', driverUserIds);
 
-      const { data: locations, error: locationsError } = await supabaseAdmin
+      const { data: locations, error: locationsError } = await supabase
         .from('live_locations')
         .select('user_id, latitude, longitude, heading, updated_at')
         .in('user_id', driverUserIds)
