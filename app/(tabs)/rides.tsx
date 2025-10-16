@@ -678,7 +678,23 @@ export default function RidesScreen() {
                   </View>
                 </View>
                 {(ride.drivers?.users?.phone_number || ride.assigned_driver?.users?.phone_number) && (
-                  <TouchableOpacity style={styles.callButton}>
+                  <TouchableOpacity
+                    style={styles.callButton}
+                    onPress={() => {
+                      const phoneNumber = ride.drivers?.users?.phone_number || ride.assigned_driver?.users?.phone_number;
+                      Alert.alert(
+                        'Driver Contact',
+                        `Phone: ${phoneNumber}`,
+                        [
+                          { text: 'Close', style: 'cancel' },
+                          { text: 'Copy', onPress: () => {
+                            // In a real app, you'd use Clipboard API
+                            Alert.alert('Copied', 'Phone number copied to clipboard');
+                          }}
+                        ]
+                      );
+                    }}
+                  >
                     <Phone size={16} color="#FFFFFF" />
                   </TouchableOpacity>
                 )}
