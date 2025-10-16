@@ -677,27 +677,43 @@ export default function RidesScreen() {
                     </Text>
                   </View>
                 </View>
-                {(ride.drivers?.users?.phone_number || ride.assigned_driver?.users?.phone_number) && (
-                  <TouchableOpacity
-                    style={styles.callButton}
-                    onPress={() => {
-                      const phoneNumber = ride.drivers?.users?.phone_number || ride.assigned_driver?.users?.phone_number;
+                <TouchableOpacity
+                  style={styles.callButton}
+                  onPress={() => {
+                    const phoneNumber = ride.drivers?.users?.phone_number || ride.assigned_driver?.users?.phone_number;
+                    console.log('📞 [PHONE] Driver data:', {
+                      drivers: ride.drivers,
+                      assigned_driver: ride.assigned_driver,
+                      phoneNumber
+                    });
+
+                    if (!phoneNumber) {
                       Alert.alert(
-                        'Driver Contact',
-                        `Phone: ${phoneNumber}`,
-                        [
-                          { text: 'Close', style: 'cancel' },
-                          { text: 'Copy', onPress: () => {
-                            // In a real app, you'd use Clipboard API
-                            Alert.alert('Copied', 'Phone number copied to clipboard');
-                          }}
-                        ]
+                        'Phone Number Unavailable',
+                        'Driver phone number is not available at this time.',
+                        [{ text: 'OK', style: 'cancel' }]
                       );
-                    }}
-                  >
-                    <Phone size={16} color="#FFFFFF" />
-                  </TouchableOpacity>
-                )}
+                      return;
+                    }
+
+                    Alert.alert(
+                      'Driver Contact',
+                      `Phone: ${phoneNumber}`,
+                      [
+                        { text: 'Cancel', style: 'cancel' },
+                        {
+                          text: 'Call',
+                          onPress: () => {
+                            // In web, show copy option. In mobile, this would open dialer
+                            Alert.alert('Call Driver', `Calling ${phoneNumber}...`);
+                          }
+                        }
+                      ]
+                    );
+                  }}
+                >
+                  <Phone size={16} color="#FFFFFF" />
+                </TouchableOpacity>
               </View>
 
               {(ride.drivers?.vehicles || ride.assigned_driver?.vehicles) && (
