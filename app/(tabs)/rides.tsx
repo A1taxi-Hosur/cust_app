@@ -41,6 +41,12 @@ export default function RidesScreen() {
 
   useEffect(() => {
     if (autoDriverLocation) {
+      console.log('🚗 [RIDES] Driver location received:', {
+        latitude: autoDriverLocation.latitude,
+        longitude: autoDriverLocation.longitude,
+        heading: autoDriverLocation.heading,
+        timestamp: autoDriverLocation.timestamp,
+      });
       setDriverLocation(autoDriverLocation);
       setLastUpdate(new Date());
     }
@@ -570,10 +576,7 @@ export default function RidesScreen() {
                               longitude: ride.destination_longitude,
                             }
                           : undefined
-                        : {
-                            latitude: ride.pickup_latitude,
-                            longitude: ride.pickup_longitude,
-                          }
+                        : undefined
                     }
                     driverLocation={{
                       latitude: driverLocation.latitude,
@@ -581,6 +584,7 @@ export default function RidesScreen() {
                       heading: driverLocation.heading,
                     }}
                     showRoute={true}
+                    showDriverToPickupRoute={ride.status === 'accepted' || ride.status === 'driver_arrived'}
                     style={styles.map}
                     showUserLocation={false}
                     followUserLocation={false}

@@ -18,9 +18,10 @@ interface EnhancedGoogleMapViewProps {
   };
   pickupCoords?: { latitude: number; longitude: number };
   destinationCoords?: { latitude: number; longitude: number };
-  driverLocation?: { latitude: number; longitude: number };
+  driverLocation?: { latitude: number; longitude: number; heading?: number };
   availableDrivers?: AvailableDriver[];
   showRoute?: boolean;
+  showDriverToPickupRoute?: boolean;
   onMapPress?: (coordinate: { latitude: number; longitude: number }) => void;
   onRouteReady?: (result: { distance: number; duration: number }) => void;
   style?: any;
@@ -41,6 +42,7 @@ const EnhancedGoogleMapView = forwardRef<MapRef, EnhancedGoogleMapViewProps>(({
   driverLocation,
   availableDrivers = [],
   showRoute = false,
+  showDriverToPickupRoute = false,
   onMapPress,
   onRouteReady,
   style,
@@ -85,10 +87,16 @@ const EnhancedGoogleMapView = forwardRef<MapRef, EnhancedGoogleMapViewProps>(({
   }, [showUserLocation]);
 
   useEffect(() => {
-    if (showRoute && pickupCoords && destinationCoords) {
-      calculateAndDisplayRoute();
+    if (showRoute) {
+      if (showDriverToPickupRoute && driverLocation && pickupCoords) {
+        // Route from driver to customer pickup location
+        calculateAndDisplayRoute(driverLocation, pickupCoords);
+      } else if (pickupCoords && destinationCoords) {
+        // Route from pickup to destination
+        calculateAndDisplayRoute(pickupCoords, destinationCoords);
+      }
     }
-  }, [showRoute, pickupCoords, destinationCoords]);
+  }, [showRoute, showDriverToPickupRoute, driverLocation, pickupCoords, destinationCoords]);
 
   useEffect(() => {
     if (isMapReady) {
@@ -105,14 +113,21 @@ const EnhancedGoogleMapView = forwardRef<MapRef, EnhancedGoogleMapViewProps>(({
 
   // Smooth marker animation when driver location updates
   useEffect(() => {
-    if (driverLocation && driverMarkerRef.current && previousDriverLocation.current) {
-      console.log('🚗 [MAP] Animating driver marker to new location:', driverLocation);
+    if (driverLocation) {
+      console.log('🚗 [MAP] Driver location updated:', {
+        latitude: driverLocation.latitude,
+        longitude: driverLocation.longitude,
+        heading: driverLocation.heading,
+      });
 
-      // Animate the marker smoothly to the new position
-      driverMarkerRef.current.animateMarkerToCoordinate(driverLocation, 1000);
+      if (driverMarkerRef.current && previousDriverLocation.current) {
+        console.log('🚗 [MAP] Animating driver marker from:', previousDriverLocation.current, 'to:', driverLocation);
+        // Animate the marker smoothly to the new position
+        driverMarkerRef.current.animateMarkerToCoordinate(driverLocation, 1000);
+      }
+
+      previousDriverLocation.current = driverLocation;
     }
-
-    previousDriverLocation.current = driverLocation;
   }, [driverLocation]);
 
   const getCurrentUserLocation = async () => {
@@ -139,16 +154,19 @@ const EnhancedGoogleMapView = forwardRef<MapRef, EnhancedGoogleMapViewProps>(({
     }
   };
 
-  const calculateAndDisplayRoute = async () => {
-    if (!pickupCoords || !destinationCoords) return;
+  const calculateAndDisplayRoute = async (
+    origin: { latitude: number; longitude: number },
+    destination: { latitude: number; longitude: number }
+  ) => {
+    if (!origin || !destination) return;
 
     try {
-      console.log('🗺️ Calculating route between:', pickupCoords, 'and', destinationCoords);
-      
+      console.log('🗺️ Calculating route between:', origin, 'and', destination);
+
       // Use Google Directions API through proxy for accurate routing
       const directions = await googleMapsService.getDirections(
-        { lat: pickupCoords.latitude, lng: pickupCoords.longitude },
-        { lat: destinationCoords.latitude, lng: destinationCoords.longitude }
+        { lat: origin.latitude, lng: origin.longitude },
+        { lat: destination.latitude, lng: destination.longitude }
       );
 
       if (directions) {
@@ -459,10 +477,10 @@ const styles = StyleSheet.create({
     shadowRadius: 4,
   },
   pickupMarker: {
-    backgroundColor: '#059669',
+    backgroundColor: '#DC2626',
   },
   destinationMarker: {
-    backgroundColor: '#DC2626',
+    backgroundColor: '#059669',
   },
   driverMarker: {
     width: 44,
