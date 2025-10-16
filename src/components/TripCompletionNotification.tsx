@@ -30,12 +30,30 @@ export default function TripCompletionNotification() {
   const [shownNotifications, setShownNotifications] = useState<Set<string>>(new Set());
 
   useEffect(() => {
+    console.log('🎯 [TRIP_NOTIFICATION] ===== CHECKING FOR COMPLETION NOTIFICATIONS =====');
+    console.log('🎯 [TRIP_NOTIFICATION] Total notifications received:', notifications.length);
+    console.log('🎯 [TRIP_NOTIFICATION] Notification types:', notifications.map(n => n.type));
+    console.log('🎯 [TRIP_NOTIFICATION] ride_completed count:', notifications.filter(n => n.type === 'ride_completed').length);
+    console.log('🎯 [TRIP_NOTIFICATION] Unread ride_completed:', notifications.filter(n => n.type === 'ride_completed' && n.status === 'unread').length);
+    console.log('🎯 [TRIP_NOTIFICATION] Already shown count:', shownNotifications.size);
+    console.log('🎯 [TRIP_NOTIFICATION] Currently visible:', visible);
+
     // Find unread trip_completed, booking_completed, or ride_completed notifications
     const tripCompletedNotifications = notifications.filter(n =>
       (n.type === 'trip_completed' || n.type === 'booking_completed' || n.type === 'ride_completed') &&
       n.status === 'unread' &&
       !shownNotifications.has(n.id)
     );
+
+    console.log('🎯 [TRIP_NOTIFICATION] Filtered completion notifications:', tripCompletedNotifications.length);
+    if (tripCompletedNotifications.length > 0) {
+      console.log('🎯 [TRIP_NOTIFICATION] First notification:', {
+        id: tripCompletedNotifications[0].id,
+        type: tripCompletedNotifications[0].type,
+        status: tripCompletedNotifications[0].status,
+        alreadyShown: shownNotifications.has(tripCompletedNotifications[0].id)
+      });
+    }
 
     if (tripCompletedNotifications.length > 0 && !visible) {
       const latest = tripCompletedNotifications[0];
