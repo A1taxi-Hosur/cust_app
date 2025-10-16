@@ -779,25 +779,27 @@ class FareCalculator {
         calculationMethod = 'slab';
 
         // Find the appropriate slab
+        // Each slab covers distances up to (slab_distance * 2) for round trips
+        // For example: 50km slab covers up to 100km total round trip distance
         const slabs = [
-          { distance: 10, fare: outstationPackageConfig.slab_10km },
-          { distance: 20, fare: outstationPackageConfig.slab_20km },
-          { distance: 30, fare: outstationPackageConfig.slab_30km },
-          { distance: 40, fare: outstationPackageConfig.slab_40km },
-          { distance: 50, fare: outstationPackageConfig.slab_50km },
-          { distance: 60, fare: outstationPackageConfig.slab_60km },
-          { distance: 70, fare: outstationPackageConfig.slab_70km },
-          { distance: 80, fare: outstationPackageConfig.slab_80km },
-          { distance: 90, fare: outstationPackageConfig.slab_90km },
-          { distance: 100, fare: outstationPackageConfig.slab_100km },
-          { distance: 110, fare: outstationPackageConfig.slab_110km },
-          { distance: 120, fare: outstationPackageConfig.slab_120km },
-          { distance: 130, fare: outstationPackageConfig.slab_130km },
-          { distance: 140, fare: outstationPackageConfig.slab_140km },
-          { distance: 150, fare: outstationPackageConfig.slab_150km },
+          { distance: 10, maxRoundTripKm: 20, fare: outstationPackageConfig.slab_10km },
+          { distance: 20, maxRoundTripKm: 40, fare: outstationPackageConfig.slab_20km },
+          { distance: 30, maxRoundTripKm: 60, fare: outstationPackageConfig.slab_30km },
+          { distance: 40, maxRoundTripKm: 80, fare: outstationPackageConfig.slab_40km },
+          { distance: 50, maxRoundTripKm: 100, fare: outstationPackageConfig.slab_50km },
+          { distance: 60, maxRoundTripKm: 120, fare: outstationPackageConfig.slab_60km },
+          { distance: 70, maxRoundTripKm: 140, fare: outstationPackageConfig.slab_70km },
+          { distance: 80, maxRoundTripKm: 160, fare: outstationPackageConfig.slab_80km },
+          { distance: 90, maxRoundTripKm: 180, fare: outstationPackageConfig.slab_90km },
+          { distance: 100, maxRoundTripKm: 200, fare: outstationPackageConfig.slab_100km },
+          { distance: 110, maxRoundTripKm: 220, fare: outstationPackageConfig.slab_110km },
+          { distance: 120, maxRoundTripKm: 240, fare: outstationPackageConfig.slab_120km },
+          { distance: 130, maxRoundTripKm: 260, fare: outstationPackageConfig.slab_130km },
+          { distance: 140, maxRoundTripKm: 280, fare: outstationPackageConfig.slab_140km },
+          { distance: 150, maxRoundTripKm: 300, fare: outstationPackageConfig.slab_150km },
         ].filter(s => s.fare !== null);
 
-        let selectedSlab = slabs.find(s => totalKmTravelled <= s.distance);
+        let selectedSlab = slabs.find(s => totalKmTravelled <= s.maxRoundTripKm);
 
         if (selectedSlab) {
           // SLAB FARE ONLY - NO DRIVER ALLOWANCE (≤ 300km total)
@@ -808,7 +810,7 @@ class FareCalculator {
           console.log('💰 [OUTSTATION] Slab found (NO driver allowance for same-day trips ≤ 150km one-way):', {
             oneWayDistance: oneWayDistance.toFixed(2) + 'km',
             totalKmTravelled: totalKmTravelled.toFixed(2) + 'km',
-            selectedSlab: selectedSlab.distance + 'km',
+            selectedSlab: selectedSlab.distance + 'km slab (covers up to ' + selectedSlab.maxRoundTripKm + 'km round trip)',
             slabFare: '₹' + slabFare,
             driverAllowance: '₹0 (not added for same-day trips ≤ 150km one-way)',
             totalFare: '₹' + totalFare,
