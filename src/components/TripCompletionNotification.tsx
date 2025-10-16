@@ -30,9 +30,9 @@ export default function TripCompletionNotification() {
   const [shownNotifications, setShownNotifications] = useState<Set<string>>(new Set());
 
   useEffect(() => {
-    // Find unread trip_completed or booking_completed notifications
+    // Find unread trip_completed, booking_completed, or ride_completed notifications
     const tripCompletedNotifications = notifications.filter(n =>
-      (n.type === 'trip_completed' || n.type === 'booking_completed') &&
+      (n.type === 'trip_completed' || n.type === 'booking_completed' || n.type === 'ride_completed') &&
       n.status === 'unread' &&
       !shownNotifications.has(n.id)
     );
