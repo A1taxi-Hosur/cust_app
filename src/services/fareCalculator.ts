@@ -737,9 +737,10 @@ class FareCalculator {
       }
 
       // Calculate total km travelled
-      // For round trips: one-way distance × 2
-      // For single trips: one-way distance only
-      const totalKmTravelled = isRoundTrip ? (oneWayDistance * 2) : oneWayDistance;
+      // ALWAYS double the one-way distance for slab calculation
+      // Slabs represent round-trip packages (e.g., 50km slab = 100km total coverage)
+      // Even single trips use doubled distance to select the appropriate slab
+      const totalKmTravelled = oneWayDistance * 2;
 
       console.log('📊 [OUTSTATION] Trip details:', {
         oneWayDistance: oneWayDistance.toFixed(2) + 'km',
@@ -748,7 +749,7 @@ class FareCalculator {
         numberOfDays,
         isSameDay,
         hasSlabConfig: !!outstationPackageConfig?.use_slab_system,
-        calculation: isRoundTrip ? 'Round trip: one-way × 2' : 'Single trip: one-way only'
+        note: 'Distance is ALWAYS doubled for slab selection (slabs are round-trip packages)'
       });
 
       let totalFare = 0;
@@ -791,32 +792,28 @@ class FareCalculator {
         calculationMethod = 'slab';
 
         // Find the appropriate slab based on total km travelled
-        // For round trips: each slab covers (slab_distance * 2). Example: 50km slab = up to 100km round trip
-        // For single trips: each slab covers its distance directly. Example: 50km slab = up to 50km one-way
+        // Slabs are round-trip packages: 50km slab covers up to 100km total
+        // Distance is ALWAYS doubled (even for single trips) to match slab coverage
         const slabs = [
-          { distance: 10, maxCoverageKm: 10, maxRoundTripKm: 20, fare: outstationPackageConfig.slab_10km },
-          { distance: 20, maxCoverageKm: 20, maxRoundTripKm: 40, fare: outstationPackageConfig.slab_20km },
-          { distance: 30, maxCoverageKm: 30, maxRoundTripKm: 60, fare: outstationPackageConfig.slab_30km },
-          { distance: 40, maxCoverageKm: 40, maxRoundTripKm: 80, fare: outstationPackageConfig.slab_40km },
-          { distance: 50, maxCoverageKm: 50, maxRoundTripKm: 100, fare: outstationPackageConfig.slab_50km },
-          { distance: 60, maxCoverageKm: 60, maxRoundTripKm: 120, fare: outstationPackageConfig.slab_60km },
-          { distance: 70, maxCoverageKm: 70, maxRoundTripKm: 140, fare: outstationPackageConfig.slab_70km },
-          { distance: 80, maxCoverageKm: 80, maxRoundTripKm: 160, fare: outstationPackageConfig.slab_80km },
-          { distance: 90, maxCoverageKm: 90, maxRoundTripKm: 180, fare: outstationPackageConfig.slab_90km },
-          { distance: 100, maxCoverageKm: 100, maxRoundTripKm: 200, fare: outstationPackageConfig.slab_100km },
-          { distance: 110, maxCoverageKm: 110, maxRoundTripKm: 220, fare: outstationPackageConfig.slab_110km },
-          { distance: 120, maxCoverageKm: 120, maxRoundTripKm: 240, fare: outstationPackageConfig.slab_120km },
-          { distance: 130, maxCoverageKm: 130, maxRoundTripKm: 260, fare: outstationPackageConfig.slab_130km },
-          { distance: 140, maxCoverageKm: 140, maxRoundTripKm: 280, fare: outstationPackageConfig.slab_140km },
-          { distance: 150, maxCoverageKm: 150, maxRoundTripKm: 300, fare: outstationPackageConfig.slab_150km },
+          { distance: 10, maxCoverageKm: 20, fare: outstationPackageConfig.slab_10km },
+          { distance: 20, maxCoverageKm: 40, fare: outstationPackageConfig.slab_20km },
+          { distance: 30, maxCoverageKm: 60, fare: outstationPackageConfig.slab_30km },
+          { distance: 40, maxCoverageKm: 80, fare: outstationPackageConfig.slab_40km },
+          { distance: 50, maxCoverageKm: 100, fare: outstationPackageConfig.slab_50km },
+          { distance: 60, maxCoverageKm: 120, fare: outstationPackageConfig.slab_60km },
+          { distance: 70, maxCoverageKm: 140, fare: outstationPackageConfig.slab_70km },
+          { distance: 80, maxCoverageKm: 160, fare: outstationPackageConfig.slab_80km },
+          { distance: 90, maxCoverageKm: 180, fare: outstationPackageConfig.slab_90km },
+          { distance: 100, maxCoverageKm: 200, fare: outstationPackageConfig.slab_100km },
+          { distance: 110, maxCoverageKm: 220, fare: outstationPackageConfig.slab_110km },
+          { distance: 120, maxCoverageKm: 240, fare: outstationPackageConfig.slab_120km },
+          { distance: 130, maxCoverageKm: 260, fare: outstationPackageConfig.slab_130km },
+          { distance: 140, maxCoverageKm: 280, fare: outstationPackageConfig.slab_140km },
+          { distance: 150, maxCoverageKm: 300, fare: outstationPackageConfig.slab_150km },
         ].filter(s => s.fare !== null);
 
-        // Select slab where totalKmTravelled fits within the slab's coverage
-        // totalKmTravelled already accounts for round trip (oneWay × 2) or single trip (oneWay × 1)
-        let selectedSlab = slabs.find(s => {
-          const maxKm = isRoundTrip ? s.maxRoundTripKm : s.maxCoverageKm;
-          return totalKmTravelled <= maxKm;
-        });
+        // Select slab where totalKmTravelled (already doubled) fits within coverage
+        let selectedSlab = slabs.find(s => totalKmTravelled <= s.maxCoverageKm);
 
         if (selectedSlab) {
           // SLAB FARE ONLY - NO DRIVER ALLOWANCE (≤ 300km total)
@@ -824,16 +821,15 @@ class FareCalculator {
           totalFare = slabFare;
           driverAllowance = 0;
 
-          const maxCoverage = isRoundTrip ? selectedSlab.maxRoundTripKm : selectedSlab.maxCoverageKm;
           console.log('💰 [OUTSTATION] Slab found (NO driver allowance for trips ≤ 300km total):', {
             tripType: isRoundTrip ? 'Round Trip' : 'Single Trip',
             oneWayDistance: oneWayDistance.toFixed(2) + 'km',
-            totalKmTravelled: totalKmTravelled.toFixed(2) + 'km',
-            selectedSlab: `${selectedSlab.distance}km slab (covers up to ${maxCoverage}km ${isRoundTrip ? 'round trip' : 'one-way'})`,
+            totalKmTravelled: totalKmTravelled.toFixed(2) + 'km (distance doubled for slab selection)',
+            selectedSlab: `${selectedSlab.distance}km slab (covers up to ${selectedSlab.maxCoverageKm}km total)`,
             slabFare: '₹' + slabFare,
             driverAllowance: '₹0 (not added for trips ≤ 300km total)',
             totalFare: '₹' + totalFare,
-            formula: `₹${slabFare} (slab only) = ₹${totalFare}`
+            formula: `₹${slabFare} (slab_${selectedSlab.distance}km) = ₹${totalFare}`
           });
         } else {
           // Exceeds largest slab but still ≤ 300km - use base slab + extra km rate
@@ -841,7 +837,7 @@ class FareCalculator {
 
           const baseSlab = slabs[slabs.length - 1]; // Get largest slab (150km)
           const baseSlabFare = Number(baseSlab.fare);
-          const baseSlabDistance = isRoundTrip ? baseSlab.maxRoundTripKm : baseSlab.maxCoverageKm;
+          const baseSlabDistance = baseSlab.maxCoverageKm; // 300km for slab_150km
           const extraDistance = totalKmTravelled - baseSlabDistance;
           const extraKmRate = Number(outstationPackageConfig.extra_km_rate) || Number(outstationPerKmConfig.per_km_rate);
           const extraFare = extraDistance * extraKmRate;
