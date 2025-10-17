@@ -136,6 +136,9 @@ export default function OutstationBookingScreen() {
 
   useEffect(() => {
     if (pickupCoords && destinationCoords && !fareCalculating) {
+      // Clear route cache to ensure fresh calculation with new locations
+      fareCalculator.clearRouteCache();
+      console.log('🔄 [OUTSTATION] Locations changed, cleared route cache and recalculating fares');
       calculateAllOutstationFares();
     }
   }, [pickupCoords, destinationCoords, isRoundTrip, numberOfDays]);

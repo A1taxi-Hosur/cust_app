@@ -29,7 +29,8 @@ export interface FareConfig {
 class FareCalculator {
   private fareConfigCache = new Map<string, { config: FareConfig; timestamp: number }>();
   private routeCache = new Map<string, { route: any; timestamp: number }>();
-  private readonly CACHE_DURATION = 10 * 60 * 1000; // 10 minutes
+  private readonly CACHE_DURATION = 10 * 60 * 1000; // 10 minutes for fare configs
+  private readonly ROUTE_CACHE_DURATION = 2 * 60 * 1000; // 2 minutes for routes (shorter to prevent stale distance data)
 
   async getFareConfig(vehicleType: string): Promise<FareConfig | null> {
     try {
@@ -1054,17 +1055,25 @@ class FareCalculator {
     destination: { latitude: number; longitude: number }
   ): Promise<{ distance: number; duration: number } | null> {
     try {
-      // Create cache key
-      const cacheKey = `${pickup.latitude.toFixed(4)},${pickup.longitude.toFixed(4)}-${destination.latitude.toFixed(4)},${destination.longitude.toFixed(4)}`;
-      
-      // Check cache
+      // Create cache key with higher precision (6 decimal places = ~0.1m accuracy)
+      const cacheKey = `${pickup.latitude.toFixed(6)},${pickup.longitude.toFixed(6)}-${destination.latitude.toFixed(6)},${destination.longitude.toFixed(6)}`;
+
+      // Check cache (using shorter duration for routes)
       const cached = this.routeCache.get(cacheKey);
-      if (cached && (Date.now() - cached.timestamp) < this.CACHE_DURATION) {
-        console.log('🗺️ Using cached route info for distance calculation');
+      if (cached && (Date.now() - cached.timestamp) < this.ROUTE_CACHE_DURATION) {
+        console.log('🗺️ [ROUTE-CACHE] ⚠️ Using CACHED route info:', {
+          cacheKey: cacheKey.substring(0, 50) + '...',
+          distance: cached.route.distance + 'km',
+          duration: cached.route.duration + 'min',
+          cacheAge: Math.round((Date.now() - cached.timestamp) / 1000) + 's',
+          maxCacheAge: this.ROUTE_CACHE_DURATION / 1000 + 's',
+          WARNING: 'If distance looks wrong, cache may be returning stale data!'
+        });
         return cached.route;
       }
 
-      console.log('🗺️ [ROUTE-INFO] ===== FETCHING ROUTE INFORMATION =====');
+      console.log('🗺️ [ROUTE-INFO] ===== FETCHING FRESH ROUTE INFORMATION =====');
+      console.log('🗺️ [ROUTE-INFO] Cache miss - will fetch from Google Maps');
       console.log('🗺️ [ROUTE-INFO] Pickup:', pickup);
       console.log('🗺️ [ROUTE-INFO] Destination:', destination);
       console.log('🗺️ [ROUTE-INFO] Attempting Google Maps Directions API...');
@@ -1598,7 +1607,14 @@ class FareCalculator {
 
   // Clear caches
   clearCache() {
+    console.log('🧹 [CACHE] Clearing all caches (fare configs and routes)');
     this.fareConfigCache.clear();
+    this.routeCache.clear();
+  }
+
+  // Clear only route cache (useful when user changes locations)
+  clearRouteCache() {
+    console.log('🧹 [CACHE] Clearing route cache only');
     this.routeCache.clear();
   }
 }
