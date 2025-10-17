@@ -634,7 +634,20 @@ export default function RidesScreen() {
                         address: ride.pickup_address,
                       }}
                       driverInfo={{
-                        name: (ride.drivers?.users?.full_name || ride.assigned_driver?.users?.full_name) || 'Driver',
+                        name: (() => {
+                          const driverName = (ride.drivers?.users?.full_name || ride.assigned_driver?.users?.full_name) || 'Driver';
+                          console.log('🚗 [RIDES] Driver info for LiveTracking:', {
+                            rideId: ride.id,
+                            driverName,
+                            hasDrivers: !!ride.drivers,
+                            hasAssignedDriver: !!ride.assigned_driver,
+                            driversUsersFullName: ride.drivers?.users?.full_name,
+                            assignedDriverUsersFullName: ride.assigned_driver?.users?.full_name,
+                            driversStructure: ride.drivers ? Object.keys(ride.drivers) : null,
+                            assignedDriverStructure: ride.assigned_driver ? Object.keys(ride.assigned_driver) : null,
+                          });
+                          return driverName;
+                        })(),
                         vehicle: `${(ride.drivers?.vehicles?.make || ride.assigned_driver?.vehicles?.make) || ''} ${(ride.drivers?.vehicles?.model || ride.assigned_driver?.vehicles?.model) || ''}`,
                         plateNumber: (ride.drivers?.vehicles?.registration_number || ride.assigned_driver?.vehicles?.registration_number) || 'N/A',
                         phone: (ride.drivers?.users?.phone_number || ride.assigned_driver?.users?.phone_number),

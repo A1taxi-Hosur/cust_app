@@ -160,9 +160,10 @@ export default function LiveDriverTracking({
 
           <View style={styles.driverCompact}>
             <Car size={12} color="#2563EB" />
-            <Text style={styles.driverText} numberOfLines={1}>
-              {driverInfo.name} • {driverInfo.plateNumber}
+            <Text style={styles.driverText} numberOfLines={1} ellipsizeMode="tail">
+              {driverInfo.name || 'Driver'}
             </Text>
+            <Text style={styles.plateText}>• {driverInfo.plateNumber}</Text>
           </View>
 
           {driverLocation && (
@@ -228,8 +229,16 @@ const styles = StyleSheet.create({
   },
   driverText: {
     fontSize: 12,
+    fontWeight: '600',
+    color: '#1F2937',
+    flexShrink: 1,
+    maxWidth: 80,
+  },
+  plateText: {
+    fontSize: 11,
     fontWeight: '500',
-    color: '#4B5563',
+    color: '#6B7280',
+    flexShrink: 0,
   },
   liveBadge: {
     flexDirection: 'row',
