@@ -855,51 +855,61 @@ class FareCalculator {
           // ROUND TRIP: Calculate based on days and daily km allowance
           const totalKmAllowance = dailyKmLimit * numberOfDays;
 
+          // Base fare for outstation trips > 300km (applies to round trips exceeding daily limits)
+          const baseFare = 500;
+
           if (totalKmTravelled <= totalKmAllowance) {
-            // Within daily km allowance: 300km × days × rate + driver allowance × days
-            totalFare = (dailyKmLimit * numberOfDays * perKmRate) + (driverAllowancePerDay * numberOfDays);
-            driverAllowance = driverAllowancePerDay * numberOfDays;
+            // Within daily km allowance: base fare + 300km × days × rate + driver allowance × days
+            const kmFare = dailyKmLimit * numberOfDays * perKmRate;
+            const allowanceFare = driverAllowancePerDay * numberOfDays;
+            totalFare = baseFare + kmFare + allowanceFare;
+            driverAllowance = allowanceFare;
 
             console.log('💰 [OUTSTATION] Round trip within daily km allowance:', {
-              formula: `(${dailyKmLimit}km/day × ${numberOfDays} days × ₹${perKmRate}/km) + (₹${driverAllowancePerDay}/day × ${numberOfDays} days)`,
-              calculation: `(${dailyKmLimit * numberOfDays}km × ₹${perKmRate}/km) + ₹${driverAllowance} = ₹${totalFare}`,
+              formula: `₹${baseFare} (base) + (${dailyKmLimit}km/day × ${numberOfDays} days × ₹${perKmRate}/km) + (₹${driverAllowancePerDay}/day × ${numberOfDays} days)`,
+              calculation: `₹${baseFare} + ₹${kmFare} + ₹${allowanceFare} = ₹${totalFare}`,
               totalKmTravelled: totalKmTravelled.toFixed(2) + 'km',
               dailyAllowance: totalKmAllowance + 'km',
-              driverAllowance: '₹' + driverAllowance,
+              baseFare: '₹' + baseFare,
+              kmFare: '₹' + kmFare,
+              driverAllowance: '₹' + allowanceFare,
               totalFare: '₹' + totalFare
             });
           } else {
-            // Exceeds daily km allowance: 300km × days × rate + driver allowance × days + extra km × rate
-            const extraKm = totalKmTravelled - totalKmAllowance;
-            const baseKmFare = dailyKmLimit * numberOfDays * perKmRate;
-            const extraKmFare = extraKm * perKmRate;
-            const driverAllowanceFee = driverAllowancePerDay * numberOfDays;
-
-            totalFare = baseKmFare + driverAllowanceFee + extraKmFare;
-            driverAllowance = driverAllowanceFee;
+            // Exceeds daily km allowance: base fare + total km × rate + driver allowance × days
+            const kmFare = totalKmTravelled * perKmRate;
+            const allowanceFare = driverAllowancePerDay * numberOfDays;
+            totalFare = baseFare + kmFare + allowanceFare;
+            driverAllowance = allowanceFare;
 
             console.log('💰 [OUTSTATION] Round trip exceeds daily km allowance:', {
-              formula: `(${dailyKmLimit}km/day × ${numberOfDays} days × ₹${perKmRate}/km) + (₹${driverAllowancePerDay}/day × ${numberOfDays} days) + (${extraKm.toFixed(2)}km extra × ₹${perKmRate}/km)`,
-              calculation: `₹${baseKmFare} + ₹${driverAllowanceFee} + ₹${extraKmFare.toFixed(2)} = ₹${totalFare}`,
+              formula: `₹${baseFare} (base) + (${totalKmTravelled.toFixed(2)}km × ₹${perKmRate}/km) + (₹${driverAllowancePerDay}/day × ${numberOfDays} days)`,
+              calculation: `₹${baseFare} + ₹${kmFare.toFixed(2)} + ₹${allowanceFare} = ₹${totalFare}`,
               totalKmTravelled: totalKmTravelled.toFixed(2) + 'km',
               dailyAllowance: totalKmAllowance + 'km',
-              extraKm: extraKm.toFixed(2) + 'km',
-              driverAllowance: '₹' + driverAllowance,
+              exceededBy: (totalKmTravelled - totalKmAllowance).toFixed(2) + 'km',
+              baseFare: '₹' + baseFare,
+              kmFare: '₹' + kmFare.toFixed(2),
+              driverAllowance: '₹' + allowanceFare,
               totalFare: '₹' + totalFare
             });
           }
         } else {
-          // SINGLE TRIP > 300km total (> 150km one-way): per-km rate + driver allowance
+          // SINGLE TRIP > 300km total (> 150km one-way): base fare + per-km rate + driver allowance
           if (totalKmTravelled > 300) {
-            totalFare = (totalKmTravelled * perKmRate) + (driverAllowancePerDay * numberOfDays);
-            driverAllowance = driverAllowancePerDay * numberOfDays;
+            const baseFare = 500;
+            const kmFare = totalKmTravelled * perKmRate;
+            const allowanceFare = driverAllowancePerDay * numberOfDays;
+            totalFare = baseFare + kmFare + allowanceFare;
+            driverAllowance = allowanceFare;
 
-            console.log('💰 [OUTSTATION] Single trip > 300km (per-km + driver allowance):', {
-              formula: `(${totalKmTravelled.toFixed(2)}km × ₹${perKmRate}/km) + (₹${driverAllowancePerDay} × ${numberOfDays} day)`,
+            console.log('💰 [OUTSTATION] Single trip > 300km (base + per-km + driver allowance):', {
+              formula: `₹${baseFare} (base) + (${totalKmTravelled.toFixed(2)}km × ₹${perKmRate}/km) + (₹${driverAllowancePerDay} × ${numberOfDays} day)`,
+              calculation: `₹${baseFare} + ₹${kmFare.toFixed(2)} + ₹${allowanceFare} = ₹${totalFare}`,
               totalKmTravelled: totalKmTravelled.toFixed(2) + 'km',
-              perKmRate: '₹' + perKmRate,
-              distanceFare: '₹' + (totalKmTravelled * perKmRate),
-              driverAllowance: '₹' + driverAllowance,
+              baseFare: '₹' + baseFare,
+              kmFare: '₹' + kmFare.toFixed(2),
+              driverAllowance: '₹' + allowanceFare,
               totalFare: '₹' + totalFare
             });
           } else {
