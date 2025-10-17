@@ -609,15 +609,20 @@ class FareCalculator {
   // Get outstation per-km configuration
   async getOutstationPerKmConfig(vehicleType: string): Promise<any | null> {
     try {
-      console.log('🔍 Fetching outstation per-km config for vehicle type:', vehicleType);
+      console.log('🔍 [FETCH-CONFIG] Fetching outstation per-km config for vehicle type:', vehicleType);
 
       const cacheKey = `outstation_perkm_${vehicleType}`;
       const cached = this.fareConfigCache.get(cacheKey);
       if (cached && (Date.now() - cached.timestamp) < this.CACHE_DURATION) {
-        console.log('✅ Using cached outstation per-km config for', vehicleType);
+        console.log('✅ [FETCH-CONFIG] Using CACHED per-km config for', vehicleType, ':', {
+          per_km_rate: cached.config.per_km_rate,
+          driver_allowance: cached.config.driver_allowance_per_day,
+          source: 'CACHE'
+        });
         return cached.config;
       }
 
+      console.log('🔄 [FETCH-CONFIG] Cache miss, fetching from database for', vehicleType);
       const { data, error } = await supabase
         .from('outstation_fares')
         .select('*')
@@ -626,8 +631,8 @@ class FareCalculator {
         .single();
 
       if (error || !data) {
-        console.warn(`❌ No outstation per-km config found for ${vehicleType}:`, error);
-        console.log('🔄 Attempting to fetch per-km config without single() to debug...');
+        console.warn(`❌ [FETCH-CONFIG] No per-km config found for ${vehicleType}:`, error?.message);
+        console.log('🔄 [FETCH-CONFIG] Attempting debug query without single()...');
 
         // Debug: Try fetching without single() to see if data exists
         const { data: allData, error: allError } = await supabase
@@ -657,7 +662,12 @@ class FareCalculator {
         return this.getFallbackOutstationConfig(vehicleType);
       }
 
-      console.log('✅ Loaded outstation per-km config from database for', vehicleType);
+      console.log('✅ [FETCH-CONFIG] Loaded per-km config from DATABASE for', vehicleType, ':', {
+        per_km_rate: data.per_km_rate,
+        driver_allowance: data.driver_allowance_per_day,
+        daily_km_limit: data.daily_km_limit,
+        source: 'DATABASE'
+      });
 
       this.fareConfigCache.set(cacheKey, {
         config: data,
@@ -850,6 +860,14 @@ class FareCalculator {
         const perKmRate = Number(outstationPerKmConfig.per_km_rate);
         const driverAllowancePerDay = Number(outstationPerKmConfig.driver_allowance_per_day);
         const dailyKmLimit = Number(outstationPerKmConfig.daily_km_limit) || 300;
+
+        console.log('💵 [OUTSTATION] Using rates from config:', {
+          vehicle_type: vehicleType,
+          per_km_rate: perKmRate,
+          driver_allowance_per_day: driverAllowancePerDay,
+          daily_km_limit: dailyKmLimit,
+          raw_config_per_km: outstationPerKmConfig.per_km_rate
+        });
 
         if (isRoundTrip) {
           // ROUND TRIP: Calculate based on days and daily km allowance
@@ -1240,11 +1258,13 @@ class FareCalculator {
   }
 
   private getFallbackOutstationConfig(vehicleType: string): any {
+    console.warn('⚠️⚠️⚠️ [FALLBACK] Using FALLBACK config for', vehicleType, '- Database query must have failed!');
+
     const configs: Record<string, any> = {
       hatchback: {
         vehicle_type: 'hatchback',
         base_fare: 500,
-        per_km_rate: 14, // This should match database
+        per_km_rate: 10, // Updated to match database
         driver_allowance_per_day: 300,
         night_charge_percent: 20,
         minimum_distance_km: 50,
@@ -1255,8 +1275,8 @@ class FareCalculator {
       hatchback_ac: {
         vehicle_type: 'hatchback_ac',
         base_fare: 600,
-        per_km_rate: 16,
-        driver_allowance_per_day: 300,
+        per_km_rate: 10, // Updated to match database
+        driver_allowance_per_day: 350,
         night_charge_percent: 20,
         minimum_distance_km: 50,
         advance_booking_discount: 5,
@@ -1266,7 +1286,7 @@ class FareCalculator {
       sedan: {
         vehicle_type: 'sedan',
         base_fare: 700,
-        per_km_rate: 18,
+        per_km_rate: 11, // Updated to match database
         driver_allowance_per_day: 400,
         night_charge_percent: 20,
         minimum_distance_km: 50,
@@ -1277,8 +1297,8 @@ class FareCalculator {
       sedan_ac: {
         vehicle_type: 'sedan_ac',
         base_fare: 800,
-        per_km_rate: 20,
-        driver_allowance_per_day: 400,
+        per_km_rate: 12, // Updated to match database
+        driver_allowance_per_day: 450,
         night_charge_percent: 20,
         minimum_distance_km: 50,
         advance_booking_discount: 5,
@@ -1288,7 +1308,7 @@ class FareCalculator {
       suv: {
         vehicle_type: 'suv',
         base_fare: 1000,
-        per_km_rate: 22,
+        per_km_rate: 19, // Updated to match database
         driver_allowance_per_day: 500,
         night_charge_percent: 20,
         minimum_distance_km: 50,
@@ -1299,8 +1319,8 @@ class FareCalculator {
       suv_ac: {
         vehicle_type: 'suv_ac',
         base_fare: 1200,
-        per_km_rate: 25,
-        driver_allowance_per_day: 500,
+        per_km_rate: 20, // Updated to match database (was 25)
+        driver_allowance_per_day: 550,
         night_charge_percent: 20,
         minimum_distance_km: 50,
         advance_booking_discount: 5,
@@ -1308,6 +1328,12 @@ class FareCalculator {
         toll_charges_included: false,
       },
     };
+
+    console.log('🔄 [FALLBACK] Returning fallback config:', {
+      vehicle_type: vehicleType,
+      per_km_rate: configs[vehicleType]?.per_km_rate || configs.sedan.per_km_rate,
+      note: 'This should only be used if database queries fail'
+    });
 
     return configs[vehicleType] || configs.sedan;
   }
