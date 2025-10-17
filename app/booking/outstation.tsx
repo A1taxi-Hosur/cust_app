@@ -142,35 +142,49 @@ export default function OutstationBookingScreen() {
 
   const loadOutstationConfigs = async () => {
     try {
-      console.log('📊 Loading outstation configs from database...');
-      
+      console.log('📊 [OUTSTATION] Loading outstation configs from database...');
+
       // Get both outstation package configs and per-km configs
       const [packageConfigs, perKmConfigs] = await Promise.all([
         supabase.from('outstation_packages').select('*').eq('is_active', true),
         supabase.from('outstation_fares').select('*').eq('is_active', true)
       ]);
-      
-      console.log('📊 Raw config query results:', {
-        packageConfigs: packageConfigs.data?.length || 0,
-        perKmConfigs: perKmConfigs.data?.length || 0,
-        packageVehicleTypes: packageConfigs.data?.map(c => c.vehicle_type) || [],
-        perKmVehicleTypes: perKmConfigs.data?.map(c => c.vehicle_type) || []
+
+      console.log('📊 [OUTSTATION] Raw config query results:', {
+        packageConfigs: {
+          data: packageConfigs.data?.length || 0,
+          error: packageConfigs.error?.message || null
+        },
+        perKmConfigs: {
+          data: perKmConfigs.data?.length || 0,
+          error: perKmConfigs.error?.message || null
+        }
       });
-      
+
+      // Check for errors
+      if (packageConfigs.error || perKmConfigs.error) {
+        throw new Error(`Database error: ${packageConfigs.error?.message || perKmConfigs.error?.message}`);
+      }
+
       // Combine configs from both tables
       const configs: any[] = [];
-      
+
       // Get unique vehicle types from both tables
       const packageVehicleTypes = packageConfigs.data?.map(c => c.vehicle_type) || [];
       const perKmVehicleTypes = perKmConfigs.data?.map(c => c.vehicle_type) || [];
       const allVehicleTypes = [...new Set([...packageVehicleTypes, ...perKmVehicleTypes])];
-      
-      console.log('📊 All vehicle types found:', allVehicleTypes);
-      
+
+      console.log('📊 [OUTSTATION] All vehicle types found:', allVehicleTypes);
+
+      if (allVehicleTypes.length === 0) {
+        console.warn('⚠️ [OUTSTATION] No vehicle types found in database, using fallback');
+        throw new Error('No vehicle configurations found');
+      }
+
       for (const vehicleType of allVehicleTypes) {
         const packageConfig = packageConfigs.data?.find(c => c.vehicle_type === vehicleType);
         const perKmConfig = perKmConfigs.data?.find(c => c.vehicle_type === vehicleType);
-        
+
         configs.push({
           vehicle_type: vehicleType,
           hasSlabSystem: !!packageConfig?.use_slab_system,
@@ -180,26 +194,34 @@ export default function OutstationBookingScreen() {
           perKmConfig
         });
       }
-      
-      console.log('📊 Loaded outstation configs:', configs.length);
-      console.log('📊 Vehicle types available:', configs.map(c => c.vehicle_type));
+
+      console.log('✅ [OUTSTATION] Successfully loaded configs:', {
+        count: configs.length,
+        vehicleTypes: configs.map(c => c.vehicle_type)
+      });
+
       setOutstationConfigs(configs);
     } catch (error) {
-      console.error('Error loading outstation configs:', error);
-      
+      console.error('❌ [OUTSTATION] Error loading configs:', error);
+
       // Fallback to default vehicle types if database fails
       const fallbackConfigs = [
-        { vehicle_type: 'hatchback', per_km_rate: 10, driver_allowance_per_day: 300 },
-        { vehicle_type: 'hatchback_ac', per_km_rate: 12, driver_allowance_per_day: 300 },
-        { vehicle_type: 'sedan', per_km_rate: 14, driver_allowance_per_day: 300 },
-        { vehicle_type: 'sedan_ac', per_km_rate: 16, driver_allowance_per_day: 300 },
-        { vehicle_type: 'suv', per_km_rate: 18, driver_allowance_per_day: 300 },
-        { vehicle_type: 'suv_ac', per_km_rate: 20, driver_allowance_per_day: 300 },
+        { vehicle_type: 'hatchback', per_km_rate: 10, driver_allowance_per_day: 300, hasSlabSystem: false },
+        { vehicle_type: 'hatchback_ac', per_km_rate: 12, driver_allowance_per_day: 300, hasSlabSystem: false },
+        { vehicle_type: 'sedan', per_km_rate: 14, driver_allowance_per_day: 300, hasSlabSystem: false },
+        { vehicle_type: 'sedan_ac', per_km_rate: 16, driver_allowance_per_day: 300, hasSlabSystem: false },
+        { vehicle_type: 'suv', per_km_rate: 18, driver_allowance_per_day: 300, hasSlabSystem: false },
+        { vehicle_type: 'suv_ac', per_km_rate: 20, driver_allowance_per_day: 300, hasSlabSystem: false },
       ];
-      
-      console.log('📊 Using fallback configs:', fallbackConfigs.length);
+
+      console.log('📊 [OUTSTATION] Using fallback configs:', {
+        count: fallbackConfigs.length,
+        vehicleTypes: fallbackConfigs.map(c => c.vehicle_type)
+      });
+
       setOutstationConfigs(fallbackConfigs);
     } finally {
+      console.log('🏁 [OUTSTATION] Setting configsLoading to false');
       setConfigsLoading(false);
     }
   };
