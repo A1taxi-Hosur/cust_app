@@ -286,18 +286,22 @@ export default function OutstationBookingScreen() {
         const daysDifference = Math.ceil(timeDifference / (1000 * 60 * 60 * 24));
         currentNumberOfDays = Math.max(1, daysDifference);
       }
-      
+
+      // Determine if this is a same-day trip (for slab vs per-km decision)
+      const isSameDayTrip = currentNumberOfDays === 1;
+
       console.log('💰 [OUTSTATION-CALC] ===== STARTING NEW SLAB/PER-KM FARE CALCULATION =====');
       console.log('💰 [OUTSTATION-CALC] Current state:', {
         isRoundTrip,
         numberOfDays: currentNumberOfDays,
+        isSameDay: isSameDayTrip,
         departureDate: departureDate.toISOString(),
         returnDate: returnDate.toISOString(),
         selectedVehicle,
         pickup: pickupCoords,
         destination: destinationCoords,
         freshDaysCalculation: currentNumberOfDays,
-        newLogic: 'Slab model for single-day trips < 300km, per-km for others'
+        newLogic: 'Slab model for same-day trips ≤ 300km, per-km for multi-day or > 300km'
       });
 
       // Update numberOfDays state with fresh calculation
@@ -339,7 +343,8 @@ export default function OutstationBookingScreen() {
             destinationCoords,
             config.vehicle_type,
             isRoundTrip,
-            currentNumberOfDays
+            currentNumberOfDays,
+            isSameDayTrip
           );
           
           if (fareBreakdown) {

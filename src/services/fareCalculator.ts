@@ -756,30 +756,32 @@ class FareCalculator {
       let calculationMethod: 'slab' | 'per_km' = 'per_km';
       let driverAllowance = 0;
 
-      // DECISION LOGIC: Slab model (no driver allowance) for trips ≤ 150km one-way (≤ 300km total)
-      // Per-km model (with driver allowance) for trips > 150km one-way OR multi-day trips
-      // For single trips: use slab if total distance ≤ 300km and slab system is available
-      // For round trips: use slab if one-way distance ≤ 150km, same day, and slab system is available
+      // DECISION LOGIC: Use slab pricing for ANY trip where totalKmTravelled ≤ 300km
+      // Since distance is ALWAYS doubled, this means:
+      //   - Single trips up to 150km one-way (150 × 2 = 300km total)
+      //   - Round trips up to 150km one-way (150 × 2 = 300km total)
+      // Per-km model (with driver allowance) ONLY for trips > 300km total OR multi-day trips
       const shouldUseSlabPricing = outstationPackageConfig?.use_slab_system &&
-                                   ((isRoundTrip && oneWayDistance <= 150 && isSameDay) ||
-                                    (!isRoundTrip && totalKmTravelled <= 300));
+                                   totalKmTravelled <= 300 &&
+                                   isSameDay;
 
       console.log('🔍 [OUTSTATION] Slab pricing decision logic:', {
         oneWayDistance: oneWayDistance.toFixed(2) + 'km',
-        totalKmTravelled: totalKmTravelled.toFixed(2) + 'km',
+        totalKmTravelled: totalKmTravelled.toFixed(2) + 'km (always doubled)',
         isRoundTrip,
         isSameDay,
         numberOfDays,
-        distanceCheck_roundTrip: oneWayDistance <= 150,
-        distanceCheck_singleTrip: totalKmTravelled <= 300,
+        distanceCheck: totalKmTravelled <= 300,
+        sameDayCheck: isSameDay,
         hasSlabConfig: !!outstationPackageConfig?.use_slab_system,
         useSlabSystem: outstationPackageConfig?.use_slab_system,
         shouldUseSlabPricing,
         reason: shouldUseSlabPricing ?
-          (isRoundTrip ? 'Round trip ≤ 150km one-way, same day' : 'Single trip ≤ 300km total') :
+          'Total distance ≤ 300km AND same-day trip' :
           (!outstationPackageConfig?.use_slab_system ? 'Slab system not configured' :
-           isRoundTrip ? 'Round trip > 150km one-way or multi-day' : 'Single trip > 300km total'),
-        decision: shouldUseSlabPricing ? 'SLAB PRICING' : 'PER-KM PRICING'
+           !isSameDay ? 'Multi-day trip (uses per-km + driver allowance)' :
+           'Total distance > 300km (uses per-km + driver allowance)'),
+        decision: shouldUseSlabPricing ? '✅ SLAB PRICING' : '❌ PER-KM PRICING'
       });
 
       if (shouldUseSlabPricing) {
